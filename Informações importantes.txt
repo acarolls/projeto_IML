@@ -15,9 +15,9 @@ ID_SERIE
 IN_PRESENCA_LP (feature para remover alunos do dataset) 
 IN_PRESENCA_MT (feature para remover alunos do dataset)
 IN_PROFICIENCIA_LP (feature para remover alunos do dataset)
-IN_PROFICIENCIA-MT (feature para remover alunos do dataset)
-PROFICIENCIA_LP_SABESP
-PROFICIENCIA_MT_SABESP
+IN_PROFICIENCIA_MT (feature para remover alunos do dataset)
+PROFICIENCIA_LP_SAEB
+PROFICIENCIA_MT_SAEB
 IN_PREENCHIMENTO_QUESTIONARIO (feature para remover alunos do dataset)
 TX_RESP_Q01
 TX_RESP_Q02
@@ -94,7 +94,8 @@ TX_Q209
 ======================== TS_ESCOLA ========================
 
 ID_ESCOLA = CHAVE PARA JUNÇÃO DE TABELAS
-PC_FORMACAO_DOCENTE_MEDIO   (feature para remover escolas sem EM)
+NU_PRESENTES_EM  (feature para remover escolas)
+PC_FORMACAO_DOCENTE_MEDIO
 TAXA_PARTICIPACAO_EM
 MEDIA_EMT_LP
 MEDIA_EMT_MT
