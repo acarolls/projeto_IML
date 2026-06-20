@@ -16,6 +16,10 @@ __pycache__/
 # Visual Studio Code
 .vscode/*
 
-# Datasets
+# Contributor instructions (local only)
+AGENTS.md
+
+# Local datasets and downloaded source material
+microdados_saeb_2023/
 TS_ALUNO_34EM.csv
 TS_ESCOLA.csv
