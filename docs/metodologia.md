@@ -40,7 +40,7 @@ Os limites inferiores são inclusivos e os superiores, exclusivos. Ao treinar qu
 
 Usar as faixas oficiais mantém o significado pedagógico das classes e permite relacionar os resultados à escala publicada pelo Inep. Faixas criadas por quantis produziriam classes mais equilibradas, mas seus limites mudariam com a amostra e perderiam essa interpretação. A remoção das notas de LP e MT é deliberadamente conservadora: embora a nota da outra disciplina possa elevar a precisão, ela funciona como uma medida paralela do mesmo desempenho escolar e desviaria o estudo para uma previsão baseada em outra prova.
 
-Os níveis possuem ordem natural, mas nesta primeira abordagem serão tratados como classes distintas pelos cinco algoritmos. Macro F1 não diferencia um erro entre níveis vizinhos de um erro entre níveis distantes; por isso, a matriz de confusão deve ser lida junto com a métrica. Uma extensão futura poderá acrescentar métricas ordinais, como kappa ponderado, sem alterar os alvos oficiais.
+Os níveis possuem ordem natural, mas nesta primeira abordagem serão tratados como classes distintas pelos cinco algoritmos. Macro F1 não diferencia um erro entre níveis vizinhos de um erro entre níveis distantes; por isso, a matriz de confusão deve ser lida junto com a métrica.
 
 ## Contrato de treinamento
 
@@ -89,9 +89,21 @@ Cinco folds oferecem um compromisso entre custo e estabilidade: cada ajuste usa 
 
 Em cada rodada, quatro folds treinam o pipeline completo e o fold restante mede o desempenho. Imputadores, codificadores e escaladores são ajustados somente nos quatro folds de treino, evitando vazamento de informação. Após as cinco rodadas, a mesma configuração é reajustada com todas as linhas e armazenada em `ResultadoTreinamento` para uso em previsões.
 
-A métrica principal será **Macro F1**: calcula-se o F1 de cada nível separadamente e depois a média simples, dando a níveis raros a mesma importância dos frequentes. Serão registrados também balanced accuracy, que calcula a média da taxa de acerto por classe, e a matriz de confusão, que mostra quais níveis são confundidos entre si. A comparação dos cinco algoritmos usará primeiro o Macro F1 médio e considerará seu desvio entre folds.
+A métrica principal será **Macro F1**. Para cada nível de proficiência, precisão mede quantos estudantes previstos naquele nível realmente pertencem a ele; recall mede quantos dos estudantes daquele nível foram identificados. O F1 é a média harmônica entre as duas medidas e só será alto quando ambas forem altas:
 
-Para cada classe, precisão mede quantas previsões daquele nível estavam corretas e recall mede quantos estudantes daquele nível foram encontrados. O F1 combina as duas medidas e só é alto quando ambas são altas. A média macro impede que uma classe numerosa domine o resultado. Balanced accuracy complementa essa visão ao resumir apenas o recall médio, enquanto a matriz de confusão preserva os tipos de erro que os valores agregados escondem.
+$$
+F1_c = 2 \times \frac{precisao_c \times recall_c}{precisao_c + recall_c}
+$$
+
+O cálculo é feito separadamente para cada uma das $C$ classes. Macro F1 é a média simples desses resultados:
+
+$$
+Macro\ F1 = \frac{1}{C}\sum_{c=1}^{C} F1_c
+$$
+
+Essa média dá a níveis raros a mesma importância dos níveis frequentes. Isso é adequado porque as faixas oficiais do Saeb provavelmente serão desbalanceadas: uma acurácia alta poderia esconder um modelo que acerta níveis intermediários numerosos, mas ignora os extremos. Por exemplo, se os F1 de três níveis forem 0,30, 0,70 e 0,80, o Macro F1 será `(0,30 + 0,70 + 0,80) / 3 = 0,60`, expondo o desempenho fraco no primeiro nível.
+
+Serão registrados também balanced accuracy, que resume o recall médio das classes, e a matriz de confusão, que mostra quais níveis são confundidos entre si. Esta última é necessária porque Macro F1 penaliza da mesma forma a confusão entre níveis vizinhos e a confusão entre níveis distantes. A comparação dos cinco algoritmos usará primeiro o Macro F1 médio e considerará também seu desvio entre folds.
 
 Os folds devem ser gerados uma única vez e reutilizados para todos os modelos. Cada classe precisa ocorrer em pelo menos cinco escolas distintas; caso contrário, a validação em cinco grupos não é válida e a execução deve falhar com uma mensagem clara, sem migrar silenciosamente para uma divisão por estudante. A matriz de confusão agregada deve usar somente previsões feitas quando cada observação estava fora do treino.
 
