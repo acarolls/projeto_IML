@@ -29,7 +29,7 @@ Os tipos serão definidos pelo significado das variáveis, não apenas pelo tipo
 
 ### Alvos de classificação
 
-Serão criadas as colunas `NIVEL_PROFICIENCIA_LP` e `NIVEL_PROFICIENCIA_MT` a partir dos Quadros 5 e 6 de `Escalas de Proficiência do Saeb.pdf`, referentes à 3ª série do Ensino Médio:
+Serão criadas as colunas `NIVEL_PROFICIENCIA_LP` e `NIVEL_PROFICIENCIA_MT` a partir dos Quadros 5 e 6 da publicação oficial *Escalas de proficiência do Saeb*, referentes à 3ª série do Ensino Médio [1]:
 
 | Disciplina | Nível 0 | Níveis intermediários | Último nível |
 | --- | --- | --- | --- |
@@ -116,3 +116,7 @@ Não haverá ajuste automático de hiperparâmetros nesta etapa. Escolher hiperp
 - Reutilizar exatamente os mesmos folds na comparação dos cinco algoritmos.
 - Testar a predição com categorias não observadas no treino e valores ausentes.
 - Executar o notebook do início ao fim após implementar o fluxo e registrar versões das dependências, inclusive `scikit-learn` e `xgboost`.
+
+## Referências
+
+1. BRASIL. Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep). [*Escalas de proficiência do Saeb*](http://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_basica/escalas_de_proficiencia_do_saeb.pdf). Brasília, DF: Inep/MEC, 2020. Quadros 5 e 6, p. 29–38. Escalas específicas publicadas pelo Inep: [Língua Portuguesa — 3ª série do Ensino Médio](http://download.inep.gov.br/educacao_basica/prova_brasil_saeb/escala/escala_proficiencia/2018/LP_3EM.pdf) e [Matemática — 3ª série do Ensino Médio](http://download.inep.gov.br/educacao_basica/prova_brasil_saeb/escala/escala_proficiencia/2018/MT_3EM.pdf). Acesso em: 20 jun. 2026.
