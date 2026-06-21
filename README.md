@@ -8,7 +8,7 @@
 
 ## Metodologia
 
-O fluxo planejado de preparação dos microdados, classificação, treinamento e validação dos modelos está descrito em [docs/metodologia.md](docs/metodologia.md).
+O fluxo planejado de preparação dos microdados, classificação, treinamento e validação dos modelos está descrito em [docs/metodologia.md](docs/Metodologia.md).
 
 ## Referências
 https://seer.ufrgs.br/renote/article/view/137740
