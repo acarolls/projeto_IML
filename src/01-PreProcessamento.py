@@ -1,7 +1,6 @@
 # Importando as bibliotecas necessárias
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 df_aluno_original = pd.read_csv('dados/TS_ALUNO_34EM.csv', encoding='latin-1', sep=';')
 df_diretor_original = pd.read_csv('dados/TS_DIRETOR.csv', encoding='latin-1', sep=';')
@@ -337,3 +336,5 @@ def classificar_nivel_MT(nota_proficiencia):
 df_final['NIVEL_LP'] = df_final['PROFICIENCIA_LP_SAEB'].apply(classificar_nivel_LP)
 df_final['NIVEL_MT'] = df_final['PROFICIENCIA_MT_SAEB'].apply(classificar_nivel_MT)
 df_final = df_final.drop(columns=['PROFICIENCIA_LP_SAEB', 'PROFICIENCIA_MT_SAEB'])
+
+df_final.to_csv('dados/TS_FINAL.csv', index=False)
