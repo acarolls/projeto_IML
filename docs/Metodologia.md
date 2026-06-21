@@ -2,35 +2,35 @@
 
 ## Visão geral
 
-O projeto transforma os microdados do Saeb em uma tabela de estudantes elegíveis e treina classificadores para prever níveis de proficiência em Língua Portuguesa (LP) ou Matemática (MT). O fluxo terá duas interfaces principais: uma função de preparação que retorna um `pandas.DataFrame` e uma função de treinamento que recebe essa tabela, a coluna-alvo e uma fábrica de estimador.
+O projeto tem por objetivo prever os níveis Saeb de proficiência em Lingua Portuguesa (LP) ou Matemática (MT) de alunos do 3º e 4º Anos do Ensino Médio. Para isso, utilizaremos classificadores de Aprendizado de Máquina em cima dos microdados do Saeb de 2023 e a biblioteca Pandas do Python.
 
-O objetivo não é reproduzir a nota exata do estudante, mas investigar quanto características pessoais, familiares e escolares conseguem distinguir faixas oficiais de desempenho. Por isso, o problema é tratado como classificação multiclasse. Os resultados devem ser interpretados como associações preditivas na população analisada, não como relações causais.
+O objetivo não é reproduzir a nota do estudante, mas investigar quanto características pessoais, familiares e escolares conseguem distinguir faixas oficiais de desempenho.
 
 ```text
-microdados brutos -> seleção e limpeza -> junção por escola -> níveis Saeb
-                  -> pipeline de atributos -> validação cruzada -> modelo final
+Tabelas brutas "Aluno", "Diretor" e "Escola" -> Limpeza e adequação de features -> Junção das tabelas -> Adicionamos o nível Saeb -> Análise Exploratória -> Pipeline de atributos -> validação cruzada -> Modelos -> Métricas
 ```
 
 ## Preparação dos dados
 
-1. Ler `TS_ALUNO_34EM.csv` e `TS_DIRETOR.csv` com separador `;` e codificação Latin-1.
-2. Substituir `.` e `*` por valores ausentes e selecionar as colunas registradas em `Informações importantes.txt`.
-3. Manter estudantes das séries de ensino médio analisadas que tenham presença e proficiência válida na disciplina correspondente ao alvo. Questionários incompletos permanecem na tabela; seus valores ausentes serão tratados pelo pipeline.
-4. Filtrar os registros de direção aplicáveis e fazer uma junção à esquerda por `ID_ESCOLA`. A junção deve preservar todos os estudantes elegíveis e ser validada como muitos-para-um, impedindo a multiplicação acidental de linhas.
-5. Retornar a tabela em memória. Arquivos brutos e tabelas geradas não devem ser versionados.
-6. Adição dos níveis de desempenho dos alunos do terceiro ano do ensino médio a partir da Escala de Proficiência SAEB, que acompanhou os microdados e descreve habilidades as quais os alunos deveriam ter. Para Matemática, a escala vai do nível 1 até 10, ao passo que, para a Língua Portuguesa, temos do nível 1 até 8. Constatamos proficiências com valor abaixo do mínimo no dataset e, por isso, adicionamos o nível 0 na classificação das colunas. Por fim, removemos a as notas de proficiência do dataset.
+1. Ler `TS_ALUNO_34EM.csv`, `TS_DIRETOR.csv` e `TS_ESCOLA.csv`.
+2. Removemos dados incompletos das tabelas, utilizando atributos de controle, como `IN_PRESENCA_LP` e `IN_PREENCHIMENTO_QUESTIONARIO`.
+3. Removemos dados que não são relevantes para nossa análise, como diretores de outras séries que não sejam do Ensino Médio, ou escolas que não possuem Ensino Médio.
+4. Verificamos se temos alunos, diretores ou escolas duplicadas.
+5. Realizamos adaptações nas features de diretor de categórica para numérica.
+6. Realizamos a junção das 3 tabelas de dados.
+7. Adicionamos marcador de ausência de diretor e trocamos a nota de proficiência pelo nível Saeb.
 
 ### Justificativa dos filtros e da junção
 
-Presença e proficiência válida são requisitos porque não existe alvo observável para quem não realizou a prova. Não exigir questionário completo evita descartar sistematicamente estudantes com respostas ausentes e reduzir ainda mais a amostra. Essa decisão limita a população de referência: o modelo descreve estudantes participantes do Saeb e não deve ser generalizado automaticamente para ausentes.
+A justificativa para esse processo é enriquecer a tabela de alunos com dados que podem ser impactantes no desempenho de estudantes como informações socioeconomicas, estruturais da escola, infraestrutura entre outros.
 
-A tabela de estudantes define a unidade de análise: uma linha representa um estudante. A junção à esquerda acrescenta contexto de direção sem eliminar estudantes cuja escola não tenha um registro de diretor utilizável. Antes da junção, registros de direção duplicados por `ID_ESCOLA` devem ser investigados e resolvidos por uma regra documentada; não se deve escolher uma linha arbitrariamente. Depois da junção, a quantidade de linhas e de `ID_ALUNO` distintos deve permanecer inalterada.
+Escolhemos um conjunto de features do dataset tendo em vista sua descrição no dicionário de dados. Nesse momento de escolha das features, ainda não teremos certeza sobre sua relevância global, no entanto inferimos que poderiam fazer parte do nosso escopo.
 
-Os tipos serão definidos pelo significado das variáveis, não apenas pelo tipo lido pelo pandas. Códigos de respostas como `TX_RESP_*` são categóricos mesmo quando contêm números. Identificadores não são atributos preditivos. Apenas medidas quantitativas genuínas devem seguir o fluxo numérico.
+A maioria das features apresenta o formato de multipla escolha, apontando grau de concordância ou adequação. Dessa forma é possível inferir que esses dados possuem intenção de ordenamento. Por isso, podemos tratálos de forma numérica.
 
 ### Alvos de classificação
 
-Serão criadas as colunas `NIVEL_PROFICIENCIA_LP` e `NIVEL_PROFICIENCIA_MT` a partir dos Quadros 5 e 6 da publicação oficial *Escalas de proficiência do Saeb*, referentes à 3ª série do Ensino Médio [1]:
+Serão removidas as colunas numéricas de `PROFICIENCIA_LP_SAEB`, `PROFICIENCIA_MT_SAEB`, que darão lugar a criação das colunas `NIVEL_LP` e `NIVEL_MT` a partir dos Quadros 5 e 6 da publicação oficial *Escalas de proficiência do Saeb*, referentes à 3ª série do Ensino Médio [1]:
 
 | Disciplina | Nível 0 | Níveis intermediários | Último nível |
 | --- | --- | --- | --- |
