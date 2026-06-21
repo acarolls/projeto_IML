@@ -58,6 +58,18 @@ treinar_modelo(tabela, alvo, fabrica_modelo) -> ResultadoTreinamento
 
 Exemplos de fábricas válidas são `lambda: LogisticRegression(max_iter=1000, random_state=42)`, `lambda: KNeighborsClassifier()`, `lambda: DecisionTreeClassifier(random_state=42)`, `lambda: RandomForestClassifier(random_state=42)` e `lambda: XGBClassifier(random_state=42, eval_metric="mlogloss")`.
 
+Embora os exemplos acima apresentem apenas algumas configurações possíveis, os hiperparâmetros utilizados foram definidos manualmente com o objetivo de manter o custo computacional dos experimentos em níveis compatíveis com máquinas de uso comum, sem a necessidade de hardware especializado. Dessa forma, buscamos um equilíbrio entre tempo de execução e capacidade de modelagem, priorizando configurações que permitissem a execução dos testes de forma estável e acessível. 
+
+Para o `KNeighborsClassifier` foi utilizado `n_neighbors=5`, mantendo uma configuração simples e amplamente utilizada como referência. 
+
+O `LogisticRegression` utilizou `max_iter=1000` para garantir a convergência do treinamento. 
+
+O `DecisionTreeClassifier` teve sua profundidade limitada por `max_depth=20`, para que o crescimento da estrutura e o consumo de recursos computacionais não se tornasse excessivo. 
+
+O `RandomForestClassifier` foi configurado com 300 árvores (`n_estimators=300`), buscando limitar o tempo de treinamento sem comprometer significativamente a estabilidade das previsões. 
+
+Já o `XGBClassifier` utilizou 500 estimadores (`n_estimators=500`), profundidade máxima de 8 níveis (`max_depth=8`) e taxa de aprendizado de 0,05 (`learning_rate=0.05`), adotando valores intermediários que permitissem a execução dos experimentos em tempo viável. 
+
 Os hiperparâmetros pertencem à fábrica; a função de treinamento não fará busca automática. O retorno `ResultadoTreinamento` conterá o pipeline final, nome do modelo, alvo, métricas de cada fold e média e desvio-padrão das métricas.
 
 Uma fábrica, em vez de um estimador já criado, garante uma instância sem estado para cada fold e para o ajuste final. Isso impede que parâmetros aprendidos em uma rodada sejam reutilizados na seguinte. O contrato previsto para o resultado é:
@@ -73,13 +85,33 @@ Uma fábrica, em vez de um estimador já criado, garante uma instância sem esta
 
 O pipeline fará todo o pré-processamento necessário. Variáveis numéricas terão imputação pela mediana e padronização; variáveis categóricas terão imputação pelo valor mais frequente e codificação one-hot. Como essas etapas ficam no mesmo objeto que o estimador, o pipeline treinado poderá receber novas linhas no mesmo formato da tabela processada e executar `predict` sem preparação manual paralela.
 
+### Escolha dos modelos
+
+Esses modelos supervisionados foram escolhidos para capturar diferentes formas de relação entre variáveis tabulares estruturadas do Saeb, explorando tanto as relações lineares quanto os padrões não lineares, além de permitir compreender as interações entre atributos.
+
+A regressão logística foi utilizada como base por possuir uma relação aproximadamente linear entre as features e as classes de proficiência, servindo como referência interpretável para comparação com os modelos mais complexos.
+
+O K-Nearest Neighbors foi incluído pois depende diretamente de medidas de distância no espaço de atributos, o que permite avaliar se estudantes com características semelhantes tendem a compartilhar níveis de desempenho próximos dentro do conjunto de dados.
+
+A árvore de decisão foi escolhida por particionar as features em regras hierárquicas, construindo condições específicas a partir das combinações de resultados dos questionários e variáveis escolares.
+
+O Random Forest é utilizado por ser uma extensão baseada em ensembles de árvores independentes, reduzindo a variância e melhorando a estabilidade das previsões de diversos subconjuntos de dados. 
+
+O XGBoost foi incluído por ser um método amplamente utilizado em artigos científicos cujo objetivo é resolver problemas de dados tabulares estruturados, principalmente em contextos educacionais e de classificação multiclasse, pois ele é capaz de construir modelos sequenciais que corrigem erros das iterações anteriores.
+
+
+Todos os modelos seguem o mesmo pipeline de pré-processamento e exatamente as mesmas divisões de validação cruzada, o que possibilita e facilita a comparação entre as abordagens selecionadas. A diferença de desempenho observada entre eles é definida exclusivamente pela capacidade de modelagem de cada algoritmo.
+
+
+É importante ressaltar que a escolha desses modelos tem como propósito comparar diferentes abordagens de aprendizado sob a mesma estrutura de dados e avaliação. Isso permite analisar até que ponto as relações mais simples são suficientes ou se ganhos significativos são obtidos ao introduzir não linearidade e métodos baseados em ensembles.
+
 ### Justificativa do pré-processamento
 
 A mediana é menos sensível a valores extremos que a média. A categoria mais frequente fornece um valor válido para respostas ausentes sem criar códigos numéricos artificiais. One-hot encoding evita impor uma ordem inexistente às alternativas dos questionários e deve ignorar categorias novas durante a predição, mantendo o esquema aprendido no treino.
 
 A padronização é essencial para KNN, que usa distâncias, e melhora a otimização da regressão logística quando as escalas numéricas diferem. Árvores e florestas não dependem da escala, mas podem compartilhar a mesma transformação sem mudar a ordem dos valores. Todo pré-processamento deve ser ajustado dentro de cada fold: calcular medianas, categorias ou escalas antes da divisão permitiria que a validação influenciasse o treino.
 
-Os modelos representam hipóteses diferentes. A regressão logística oferece uma referência linear e interpretável; KNN explora similaridade local; a árvore captura regras e interações não lineares; random forest reduz a variância de uma árvore por agregação; XGBoost constrói árvores sequencialmente para corrigir erros anteriores. Compará-los sob os mesmos atributos, folds e métricas separa melhor o efeito do algoritmo do efeito da avaliação.
+
 
 ## Validação cruzada
 
@@ -108,6 +140,18 @@ Serão registrados também balanced accuracy, que resume o recall médio das cla
 Os folds devem ser gerados uma única vez e reutilizados para todos os modelos. Cada classe precisa ocorrer em pelo menos cinco escolas distintas; caso contrário, a validação em cinco grupos não é válida e a execução deve falhar com uma mensagem clara, sem migrar silenciosamente para uma divisão por estudante. A matriz de confusão agregada deve usar somente previsões feitas quando cada observação estava fora do treino.
 
 Não haverá ajuste automático de hiperparâmetros nesta etapa. Escolher hiperparâmetros com base nos mesmos cinco folds e depois apresentar suas métricas como estimativa final produziria uma avaliação otimista. Se busca de hiperparâmetros for adicionada, ela deverá usar validação aninhada ou um conjunto de teste externo mantido intocado.
+
+## Experimentos exploratórios
+
+Além da validação cruzada utilizada como método principal de avaliação dos modelos, foi criado um notebook de testes (`teste_modelos.ipynb`) com o objetivo de verificar o funcionamento do pipeline e observar o comportamento dos modelos em uma execução direta.
+
+Nesse experimento, cada modelo foi treinado e avaliado de forma isolada, permitindo a análise de métricas como precision, recall e F1-score, além do tempo de execução do treinamento e da predição. Também foram observados os parâmetros utilizados na configuração do modelo e do pipeline.
+
+Esses testes foram feitos com dados sintéticos, composto por 50.000 observações, 50 atributos, dos quais 20 foram definidos como atributos informativos para o processo de classificação, distribuídas em três classes. A divisão entre treino e teste foi realizada na proporção de 80% e 20%, utilizando estratificação das classes e `random_state=42` para garantir reprodutibilidade. 
+
+Os resultados obtidos revelaram diferenças significativas entre os modelos tanto em desempenho quanto em custo computacional. Métodos baseados em ensembles, como Random Forest e XGBoost, apresentaram melhor desempenho no conjunto sintético, porém com maior tempo de treinamento quando comparados a modelos mais simples.
+
+Vale ressaltar que o propósito desta avaliação não é medir o desempenho real dos modelos no problema estudado, mas sim analisar o comportamento e o custo computacional das abordagens em um ambiente controlado. Portanto, esses testes não substituem a validação cruzada, porém servem como uma verificação complementar.
 
 ## Interpretação e limitações
 
