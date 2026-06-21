@@ -33,10 +33,10 @@ colunas_de_interesse_diretor = ['ID_ESCOLA', 'ID_SERIE', 'TX_Q020','TX_Q022','TX
 
 remover_diretor = {
     'IN_PREENCHIMENTO_QUESTIONARIO': [0],   # Remover diretores que não preencheram o questionário
-    'ID_SERIE': [5, 9, 2]}     
+    'ID_SERIE': [5, 9, 2]}
 
-colunas_de_interesse_escola = ['ID_ESCOLA','PC_FORMACAO_DOCENTE_MEDIO','TAXA_PARTICIPACAO_EM',
-    'MEDIA_EMT_LP','MEDIA_EMT_MT','MEDIA_EMI_LP','MEDIA_EMI_MT','MEDIA_EM_LP','MEDIA_EM_MT']
+colunas_de_interesse_escola = ['ID_ESCOLA','PC_FORMACAO_DOCENTE_MEDIO',
+                               'TAXA_PARTICIPACAO_EM','MEDIA_EM_LP','MEDIA_EM_MT']
 
 remover_escola = {
     'NU_PRESENTES_EM': 0}                   # Remover escolas que não tenham alunos presentes no ensino médio
@@ -100,7 +100,6 @@ print(f"Alunos em mais de uma escola: {df_aluno_limpo['ID_ALUNO'].duplicated().s
 print(f"Alunos duplicados: {df_aluno_limpo['ID_ALUNO'].duplicated().sum()}")
 
 
-
 print(f"Escolas com ID_ESCOLA duplicados: {df_escola_limpo['ID_ESCOLA'].duplicated().sum()}")
 
 escolas_com_diretores_duplicados = (
@@ -115,7 +114,6 @@ escolas_sem_diretores = (
 )
 
 print(f'Escolas com mais de um diretor: {len(escolas_com_diretores_duplicados)}')
-print(f'Escolas sem diretor: {len(escolas_sem_diretores)} -> {len(escolas_sem_diretores) / len(df_escola_limpo) * 100:.2f}%')
 print("\n# ================================================================\n")
 
 # ================================================================
