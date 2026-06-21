@@ -1,0 +1,109 @@
+> Informações importantes: 
+- 3ª/4ª séries do Ensino Médio Integrado -> Ensino profissionalizante
+- 3ª/4ª séries do Ensino Médio Tradicional -> Ensino para vestibular
+
+> Dataset e colunas para unificar no dataset final: 
+
+======================== TS_ALUNO_34EM ========================
+
+ID_ESCOLA = CHAVE PARA JUNÇÃO DE TABELAS
+ID_ALUNO, = IDENTIFICADOR DO ALUNO (Verificar se há aluno duplicado)
+ID_UF
+ID_AREA
+IN_PUBLICA
+ID_SERIE
+IN_PRESENCA_LP (feature para remover alunos do dataset) 
+IN_PRESENCA_MT (feature para remover alunos do dataset)
+IN_PROFICIENCIA_LP (feature para remover alunos do dataset)
+IN_PROFICIENCIA_MT (feature para remover alunos do dataset)
+PROFICIENCIA_LP_SAEB
+PROFICIENCIA_MT_SAEB
+IN_PREENCHIMENTO_QUESTIONARIO (feature para remover alunos do dataset)
+TX_RESP_Q01
+TX_RESP_Q02
+TX_RESP_Q03
+TX_RESP_Q04
+TX_RESP_Q05a
+TX_RESP_Q05b
+TX_RESP_Q05c
+TX_RESP_Q06
+TX_RESP_Q07a
+TX_RESP_Q07b
+TX_RESP_Q07c
+TX_RESP_Q07d
+TX_RESP_Q07e
+TX_RESP_Q08
+TX_RESP_Q09
+TX_RESP_Q10a
+TX_RESP_Q10b
+TX_RESP_Q10c
+TX_RESP_Q10d
+TX_RESP_Q10e
+TX_RESP_Q10f
+TX_RESP_Q11a
+TX_RESP_Q11b
+TX_RESP_Q11c
+TX_RESP_Q12b
+TX_RESP_Q12c
+TX_RESP_Q14
+TX_RESP_Q15b
+TX_RESP_Q16
+TX_RESP_Q17
+TX_RESP_Q18
+TX_RESP_Q19
+TX_RESP_Q21a
+TX_RESP_Q21b
+TX_RESP_Q21c
+TX_RESP_Q21d
+TX_RESP_Q21e
+TX_RESP_Q23d
+TX_RESP_Q24
+
+
+======================== TS_DIRETOR ========================
+
+ID_ESCOLA = CHAVE PARA JUNÇÃO DE TABELAS
+ID_DIRETOR = IDENTIFICADOR DO DIRETOR (Verificar se há diretor duplicado)
+ID_SERIE                (deixar apenas 3ª/4ª séries do Ensino Médio Integrado e 3ª/4ª séries do Ensino Médio Tradicional)
+IN_PREENCHIMENTO_QUESTIONARIO (feature para remover diretores do dataset)
+TX_Q020, num            (numérica de 0-60)
+TX_Q022, num            (numérica de 0-60)
+TX_Q032, charPnum,      (categórica para numérica, grau de adequação, A = Não tem, E = Muito adequado)
+TX_Q033, charPnum,      (categórica para numérica, grau de adequação, A = Não tem, E = Muito adequado)
+TX_Q035, charPnum,      (categórica para numérica, grau de adequação, A = Não tem, E = Muito adequado)
+TX_Q036, charPnum,      (categórica para numérica, grau de adequação, A = Não tem, E = Muito adequado)
+TX_Q056, charPnum,      (categórica para numérica, grau de concordância, A = Discorda Fortemente, D = Concordo Fortemente)
+TX_Q057, charPnum,      (categórica para numérica, grau de concordância, A = Discorda Fortemente, D = Concordo Fortemente)
+TX_Q078, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q079, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q081, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q082, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q083, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q085, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q087, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q108, charPnum,      (categórica para numérica, grau de adequação, A = Muito inadequado, D = Muito adequado)
+TX_Q119, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q129, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q130, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q139, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q191, charPnum,      (categórica para numérica, grau de adequação, A = Não tem, E = Muito adequado)
+TX_Q194, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q203, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q205, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q206, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q207, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q208, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+TX_Q209, charPbool,     (A = False, B = True)        (categórica para booleana, desempate = TRUE)
+
+======================== TS_ESCOLA ========================
+
+ID_ESCOLA = CHAVE PARA JUNÇÃO DE TABELAS
+NU_PRESENTES_EM  (feature para remover escolas)
+PC_FORMACAO_DOCENTE_MEDIO
+TAXA_PARTICIPACAO_EM
+MEDIA_EMT_LP
+MEDIA_EMT_MT
+MEDIA_EMI_LP
+MEDIA_EMI_MT
+MEDIA_EM_LP
+MEDIA_EM_MT

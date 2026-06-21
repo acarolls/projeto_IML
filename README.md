@@ -6,6 +6,10 @@
 - Theo Luigi
 - João Gabriel Lourenço Marques
 
+## Metodologia
+
+O fluxo planejado de preparação dos microdados, classificação, treinamento e validação dos modelos está descrito em [docs/metodologia.md](docs/Metodologia.md).
+
 ## Referências
 https://seer.ufrgs.br/renote/article/view/137740
 SANTANA, Mellany Linhares; DE GUSMÃO, Renê Pereira; GUSMÃO, Cleonides Silva Dias. Predição de Desempenho em Língua Portuguesa de Estudantes do Ensino Fundamental: Um Estudo de Caso em Sergipe. Revista Novas Tecnologias na Educação, v. 21, n. 2, p. 198-207, 2023.
