@@ -26,13 +26,14 @@ remover_aluno = {
     'IN_PROFICIENCIA_MT': 0,                # Remover alunos que não tenham proficiência em matemática
     'IN_PREENCHIMENTO_QUESTIONARIO': 0}     # Remover alunos que não preencheram o questionário
 
-colunas_de_interesse_diretor = ['ID_ESCOLA', 'TX_Q020','TX_Q022','TX_Q032','TX_Q033','TX_Q035',
+colunas_de_interesse_diretor = ['ID_ESCOLA', 'ID_SERIE', 'TX_Q020','TX_Q022','TX_Q032','TX_Q033','TX_Q035',
 'TX_Q036','TX_Q056','TX_Q057','TX_Q078','TX_Q079','TX_Q081','TX_Q082','TX_Q083', 'TX_Q085','TX_Q087',
 'TX_Q108','TX_Q119','TX_Q129','TX_Q130','TX_Q139','TX_Q191','TX_Q194','TX_Q203','TX_Q205','TX_Q206','TX_Q207',
 'TX_Q208','TX_Q209']
 
 remover_diretor = {
-    'IN_PREENCHIMENTO_QUESTIONARIO': [0]}     # Remover diretores que não preencheram o questionário
+    'IN_PREENCHIMENTO_QUESTIONARIO': [0],   # Remover diretores que não preencheram o questionário
+    'ID_SERIE': [5, 9, 2]}     
 
 colunas_de_interesse_escola = ['ID_ESCOLA','PC_FORMACAO_DOCENTE_MEDIO','TAXA_PARTICIPACAO_EM',
     'MEDIA_EMT_LP','MEDIA_EMT_MT','MEDIA_EMI_LP','MEDIA_EMI_MT','MEDIA_EM_LP','MEDIA_EM_MT']
@@ -40,11 +41,11 @@ colunas_de_interesse_escola = ['ID_ESCOLA','PC_FORMACAO_DOCENTE_MEDIO','TAXA_PAR
 remover_escola = {
     'NU_PRESENTES_EM': 0}                   # Remover escolas que não tenham alunos presentes no ensino médio
 
-
 # ================================================================
 # Aplicaremos as regras de limpeza de dados e selecionaremos as features
 # ================================================================
 
+print("\n# ================================================================\n")
 df_aluno_limpo = df_aluno_original.copy()
 df_diretor_limpo = df_diretor_original.copy()
 df_escola_limpo = df_escola_original.copy()
@@ -53,7 +54,7 @@ for coluna, valor in remover_aluno.items():
     antes = len(df_aluno_limpo)
     df_aluno_limpo = df_aluno_limpo[df_aluno_limpo[coluna] != valor]
     removidas = antes - len(df_aluno_limpo)
-
+    
     print(
         f"Alunos: removidas {removidas} linhas "
         f"pela regra: {coluna} != {valor}"
@@ -84,21 +85,21 @@ df_diretor_limpo = df_diretor_limpo[colunas_de_interesse_diretor]
 df_escola_limpo = df_escola_limpo[colunas_de_interesse_escola]
 
 print("\n# ================================================================\n")
-
 print(f'Alunos: {len(df_aluno_limpo)} linhas')
 print(f'Diretores: {len(df_diretor_limpo)} linhas')
 print(f'Escolas: {len(df_escola_limpo)} linhas')
-
+print("\n# ================================================================\n")
 
 # ================================================================
 # Podemos ter problemas ao unificar as tabelas se houver escolas
 # com o mesmo ID e multiplos diretores
 # ================================================================
 
+print("\n# ================================================================\n")
 print(f"Alunos em mais de uma escola: {df_aluno_limpo['ID_ALUNO'].duplicated().sum()}")
 print(f"Alunos duplicados: {df_aluno_limpo['ID_ALUNO'].duplicated().sum()}")
 
-print("\n# ================================================================\n")
+
 
 print(f"Escolas com ID_ESCOLA duplicados: {df_escola_limpo['ID_ESCOLA'].duplicated().sum()}")
 
@@ -114,24 +115,25 @@ escolas_sem_diretores = (
 )
 
 print(f'Escolas com mais de um diretor: {len(escolas_com_diretores_duplicados)}')
-print(f'Escolas sem diretor: {len(escolas_sem_diretores)}')
-
+print(f'Escolas sem diretor: {len(escolas_sem_diretores)} -> {len(escolas_sem_diretores) / len(df_escola_limpo) * 100:.2f}%')
+print("\n# ================================================================\n")
 
 # ================================================================
-# Vamos tratar os casos de escolas com mais de um diretor
+# Vamos tratar as Features transformando de categóricas para numéricas quando possivel
 # ================================================================
-colunas_numericas = [
+
+colunas_diretor_numericas = [
     'TX_Q020',
     'TX_Q022'
 ]
 
-colunas_ordinais_AD = [
+colunas_diretor_ordinais_AD = [
     'TX_Q056',
     'TX_Q057',
     'TX_Q108'
 ]
 
-colunas_ordinais_AE = [
+colunas_diretor_ordinais_AE = [
     'TX_Q032',
     'TX_Q033',
     'TX_Q035',
@@ -139,7 +141,7 @@ colunas_ordinais_AE = [
     'TX_Q191'
 ]
 
-colunas_booleanas = [
+colunas_diretor_booleanas = [
     'TX_Q078', 'TX_Q079', 'TX_Q081', 'TX_Q082',
     'TX_Q083', 'TX_Q085', 'TX_Q087', 'TX_Q119',
     'TX_Q129', 'TX_Q130', 'TX_Q139', 'TX_Q194',
@@ -152,18 +154,18 @@ colunas_booleanas = [
 # ================================================================
 
 mapa_AD = {
-    'A': 0/3,
-    'B': 1/3,
-    'C': 2/3,
-    'D': 3/3
+    'A': 0 / 3,
+    'B': 1 / 3,
+    'C': 2 / 3,
+    'D': 3 / 3
 }
 
 mapa_AE = {
-    'A': 0/4,
-    'B': 1/4,
-    'C': 2/4,
-    'D': 3/4,
-    'E': 4/4
+    'A': 0 / 4,
+    'B': 1 / 4,
+    'C': 2 / 4,
+    'D': 3 / 4,
+    'E': 4 / 4
 }
 
 mapa_bool = {
@@ -172,10 +174,10 @@ mapa_bool = {
 }
 
 # ================================================================
-# Conversão das respostas
+# Conversão das respostas dos diretores
 # ================================================================
 
-for col in colunas_ordinais_AD:
+for col in colunas_diretor_ordinais_AD:
     if col in df_diretor_limpo.columns:
         df_diretor_limpo[col] = (
             df_diretor_limpo[col]
@@ -183,7 +185,7 @@ for col in colunas_ordinais_AD:
             .astype('float32')
         )
 
-for col in colunas_ordinais_AE:
+for col in colunas_diretor_ordinais_AE:
     if col in df_diretor_limpo.columns:
         df_diretor_limpo[col] = (
             df_diretor_limpo[col]
@@ -191,7 +193,7 @@ for col in colunas_ordinais_AE:
             .astype('float32')
         )
 
-for col in colunas_booleanas:
+for col in colunas_diretor_booleanas:
     if col in df_diretor_limpo.columns:
         df_diretor_limpo[col] = (
             df_diretor_limpo[col]
@@ -199,38 +201,48 @@ for col in colunas_booleanas:
             .astype('float32')
         )
 
-# ================================================================
-# Regras de agregação
-# ================================================================
+# Cada linha restante possui um diretor válido
+df_diretor_limpo['POSSUI_DIRETOR'] = np.int8(1)
 
-agg = {}
-
-for col in colunas_numericas:
-    if col in df_diretor_limpo.columns:
-        agg[col] = 'mean'
-
-for col in colunas_ordinais_AD + colunas_ordinais_AE:
-    if col in df_diretor_limpo.columns:
-        agg[col] = 'mean'
-
-for col in colunas_booleanas:
-    if col in df_diretor_limpo.columns:
-        agg[col] = 'max'
+print("\n# ================================================================\n")
+print('Registros duplicados de (ID_ESCOLA, ID_SERIE):',df_diretor_limpo.duplicated(subset=['ID_ESCOLA', 'ID_SERIE']).sum())
 
 # ================================================================
-# Uma linha por escola
+# Estatísticas
 # ================================================================
 
-df_diretor_agregado = (
-    df_diretor_limpo
-    .groupby('ID_ESCOLA', as_index=False)
-    .agg(agg)
+pares_aluno = (
+    df_aluno_limpo[['ID_ESCOLA', 'ID_SERIE']]
+    .drop_duplicates()
 )
 
-df_diretor_agregado['POSSUI_DIRETOR'] = np.int8(1)
+pares_diretor = (
+    df_diretor_limpo[['ID_ESCOLA', 'ID_SERIE']]
+)
 
-print(f'Escolas com diretor: {len(df_diretor_agregado)} -> {100* len(df_diretor_agregado)/len(df_escola_limpo):.2f}%')
-print(f'Escolas sem diretor: {len(df_escola_limpo) - len(df_diretor_agregado)} -> {100* (len(df_escola_limpo) - len(df_diretor_agregado))/len(df_escola_limpo):.2f}%')
+pares_com_diretor = (
+    pares_aluno.merge(
+        pares_diretor,
+        on=['ID_ESCOLA', 'ID_SERIE'],
+        how='left',
+        indicator=True
+    )
+)
+
+qtd_com = (pares_com_diretor['_merge'] == 'both').sum()
+qtd_sem = (pares_com_diretor['_merge'] == 'left_only').sum()
+
+print(
+    f'Pares escola-série com diretor: '
+    f'{qtd_com:,} -> '
+    f'{100*qtd_com/len(pares_com_diretor):.2f}%'
+)
+
+print(
+    f'Pares escola-série sem diretor: '
+    f'{qtd_sem:,} -> '
+    f'{100*qtd_sem/len(pares_com_diretor):.2f}%'
+)
 
 # ================================================================
 # Merge final
@@ -239,8 +251,8 @@ print(f'Escolas sem diretor: {len(df_escola_limpo) - len(df_diretor_agregado)} -
 df_unificado = (
     df_aluno_limpo
     .merge(
-        df_diretor_agregado,
-        on='ID_ESCOLA',
+        df_diretor_limpo,
+        on=['ID_ESCOLA', 'ID_SERIE'],
         how='left'
     )
     .merge(
@@ -250,13 +262,28 @@ df_unificado = (
     )
 )
 
-# Escolas sem diretor recebem 0
+# Escolas/séries sem diretor recebem 0
 df_unificado['POSSUI_DIRETOR'] = (
     df_unificado['POSSUI_DIRETOR']
     .fillna(0)
     .astype(np.int8)
 )
 
-print(f'Registros com diretor: {df_unificado["POSSUI_DIRETOR"].sum():} -> {100* df_unificado["POSSUI_DIRETOR"].sum()/len(df_unificado):.2f}%')
-print(f'Registros sem diretor: {len(df_unificado) - df_unificado["POSSUI_DIRETOR"].sum():} -> {100* (len(df_unificado) - df_unificado["POSSUI_DIRETOR"].sum())/len(df_unificado):.2f}%')
-print(f'Linhas finais: {len(df_unificado)}')
+registros_com = int(df_unificado['POSSUI_DIRETOR'].sum())
+registros_sem = len(df_unificado) - registros_com
+
+pct_com = 100 * registros_com / len(df_unificado)
+pct_sem = 100 - pct_com
+
+print(
+    f'Registros com diretor: '
+    f'{registros_com:,} -> {pct_com:.2f}%'
+)
+
+print(
+    f'Registros sem diretor: '
+    f'{registros_sem:,} -> {pct_sem:.2f}%'
+)
+
+print(f'Linhas finais: {len(df_unificado):,}')
+print("\n# ================================================================\n")
