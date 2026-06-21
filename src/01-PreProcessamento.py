@@ -332,6 +332,8 @@ def classificar_nivel_MT(nota_proficiencia):
         return 9
     elif nota_proficiencia >= 450:
         return 10
-   
+
+# Adicionando os níveis de proficiência de cada aluno e removendo as colunas originais de proficiência
 df_final['NIVEL_LP'] = df_final['PROFICIENCIA_LP_SAEB'].apply(classificar_nivel_LP)
 df_final['NIVEL_MT'] = df_final['PROFICIENCIA_MT_SAEB'].apply(classificar_nivel_MT)
+df_final = df_final.drop(columns=['PROFICIENCIA_LP_SAEB', 'PROFICIENCIA_MT_SAEB'])

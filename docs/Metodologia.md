@@ -18,7 +18,7 @@ microdados brutos -> seleção e limpeza -> junção por escola -> níveis Saeb
 3. Manter estudantes das séries de ensino médio analisadas que tenham presença e proficiência válida na disciplina correspondente ao alvo. Questionários incompletos permanecem na tabela; seus valores ausentes serão tratados pelo pipeline.
 4. Filtrar os registros de direção aplicáveis e fazer uma junção à esquerda por `ID_ESCOLA`. A junção deve preservar todos os estudantes elegíveis e ser validada como muitos-para-um, impedindo a multiplicação acidental de linhas.
 5. Retornar a tabela em memória. Arquivos brutos e tabelas geradas não devem ser versionados.
-6. Adição dos níveis de desempenho dos alunos do terceiro ano do ensino médio a partir da Escala de Proficiência SAEB, que acompanhou os microdados e descreve habilidades as quais os alunos deveriam ter. Para Matemática, a escala vai do nível 1 até 10, ao passo que, para a Língua Portuguesa, temos do nível 1 até 8. Constatamos proficiências com valor abaixo do mínimo no dataset e, por isso, adicionamos o nível 0 na classificação das colunas.
+6. Adição dos níveis de desempenho dos alunos do terceiro ano do ensino médio a partir da Escala de Proficiência SAEB, que acompanhou os microdados e descreve habilidades as quais os alunos deveriam ter. Para Matemática, a escala vai do nível 1 até 10, ao passo que, para a Língua Portuguesa, temos do nível 1 até 8. Constatamos proficiências com valor abaixo do mínimo no dataset e, por isso, adicionamos o nível 0 na classificação das colunas. Por fim, removemos a as notas de proficiência do dataset.
 
 ### Justificativa dos filtros e da junção
 
