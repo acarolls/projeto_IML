@@ -285,3 +285,53 @@ print(
 
 print(f'Linhas finais: {len(df_unificado):,}')
 print("\n# ================================================================\n")
+
+# Adicionando a classificação de nível de acordo com a escala SAEB
+df_final = df_unificado.copy()
+
+def classificar_nivel_LP(nota_proficiencia):
+    if nota_proficiencia < 225:
+        return 0
+    elif 225 <= nota_proficiencia < 250:
+        return 1
+    elif 250 <= nota_proficiencia < 275:
+        return 2
+    elif 275 <= nota_proficiencia < 300:
+        return 3
+    elif 300 <= nota_proficiencia < 325:
+        return 4
+    elif 325 <= nota_proficiencia < 350:
+        return 5
+    elif 350 <= nota_proficiencia < 375:
+        return 6
+    elif 375 <= nota_proficiencia < 400:
+        return 7
+    elif nota_proficiencia >= 400:
+        return 8
+    
+def classificar_nivel_MT(nota_proficiencia):
+    if nota_proficiencia < 225:
+        return 0
+    elif 225 <= nota_proficiencia < 250:
+        return 1
+    elif 250 <= nota_proficiencia < 275:
+        return 2
+    elif 275 <= nota_proficiencia < 300:
+        return 3
+    elif 300 <= nota_proficiencia < 325:
+        return 4
+    elif 325 <= nota_proficiencia < 350:
+        return 5
+    elif 350 <= nota_proficiencia < 375:
+        return 6
+    elif 375 <= nota_proficiencia < 400:
+        return 7
+    elif 400 <= nota_proficiencia < 425:
+        return 8
+    elif 425 <= nota_proficiencia < 450:
+        return 9
+    elif nota_proficiencia >= 450:
+        return 10
+   
+df_final['NIVEL_LP'] = df_final['PROFICIENCIA_LP_SAEB'].apply(classificar_nivel_LP)
+df_final['NIVEL_MT'] = df_final['PROFICIENCIA_MT_SAEB'].apply(classificar_nivel_MT)
