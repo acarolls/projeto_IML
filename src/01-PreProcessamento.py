@@ -1,6 +1,7 @@
 # Importando as bibliotecas necessárias
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 df_aluno_original = pd.read_csv('dados/TS_ALUNO_34EM.csv', encoding='latin-1', sep=';')
 df_diretor_original = pd.read_csv('dados/TS_DIRETOR.csv', encoding='latin-1', sep=';')
@@ -11,7 +12,7 @@ df_escola_original = pd.read_csv('dados/TS_ESCOLA.csv', encoding='latin-1', sep=
 # que usaremos para limpar linhas que não tenham dados relevantes
 # ================================================================
 
-colunas_de_interesse_aluno = ['ID_ESCOLA', 'ID_ALUNO', 'ID_UF', 'ID_AREA', 'IN_PUBLICA', 'ID_SERIE', 'PROFICIENCIA_LP_SAEB', 
+colunas_de_interesse_aluno = ['ID_ESCOLA', 'ID_ALUNO', 'ID_UF', 'ID_MUNICIPIO', 'ID_AREA', 'IN_PUBLICA', 'ID_SERIE', 'PROFICIENCIA_LP_SAEB', 
 'PROFICIENCIA_MT_SAEB', 'TX_RESP_Q01', 'TX_RESP_Q02', 'TX_RESP_Q03', 'TX_RESP_Q04', 'TX_RESP_Q05a', 'TX_RESP_Q05b',
 'TX_RESP_Q05c', 'TX_RESP_Q06','TX_RESP_Q07a','TX_RESP_Q07b','TX_RESP_Q07c','TX_RESP_Q07d','TX_RESP_Q07e','TX_RESP_Q08','TX_RESP_Q09',
 'TX_RESP_Q10a','TX_RESP_Q10b','TX_RESP_Q10c','TX_RESP_Q10d','TX_RESP_Q10e','TX_RESP_Q10f','TX_RESP_Q11a','TX_RESP_Q11b','TX_RESP_Q11c',
@@ -34,11 +35,11 @@ remover_diretor = {
     'IN_PREENCHIMENTO_QUESTIONARIO': [0],   # Remover diretores que não preencheram o questionário
     'ID_SERIE': [5, 9, 2]}
 
-colunas_de_interesse_escola = ['ID_ESCOLA','PC_FORMACAO_DOCENTE_MEDIO',
-                               'TAXA_PARTICIPACAO_EM','MEDIA_EM_LP','MEDIA_EM_MT']
+colunas_de_interesse_escola = ['ID_ESCOLA','PC_FORMACAO_DOCENTE_MEDIO', 'MEDIA_EM_LP','MEDIA_EM_MT']
 
 remover_escola = {
     'NU_PRESENTES_EM': 0}                   # Remover escolas que não tenham alunos presentes no ensino médio
+
 
 # ================================================================
 # Aplicaremos as regras de limpeza de dados e selecionaremos as features
@@ -87,6 +88,13 @@ print("\n# ================================================================\n")
 print(f'Alunos: {len(df_aluno_limpo)} linhas')
 print(f'Diretores: {len(df_diretor_limpo)} linhas')
 print(f'Escolas: {len(df_escola_limpo)} linhas')
+print("\n# ================================================================\n")
+
+# Quantidade de linhas removidas do dataset original
+print(f'Alunos: {len(df_aluno_original) - len(df_aluno_limpo)} linhas removidas do dataset original -> {(len(df_aluno_limpo))/len(df_aluno_original)*100:.2f}% linhas restantes')
+print(f'Diretores: {len(df_diretor_original) - len(df_diretor_limpo)} linhas removidas do dataset original -> {(len(df_diretor_limpo))/len(df_diretor_original)*100:.2f}% linhas restantes')
+print(f'Escolas: {len(df_escola_original) - len(df_escola_limpo)} linhas removidas do dataset original -> {(len(df_escola_limpo))/len(df_escola_original)*100:.2f}% linhas restantes')
+
 print("\n# ================================================================\n")
 
 # ================================================================
@@ -146,6 +154,35 @@ colunas_diretor_booleanas = [
     'TX_Q208', 'TX_Q209'
 ]
 
+colunas_aluno_booleanas = [
+    'TX_RESP_Q07a', 'TX_RESP_Q07b', 'TX_RESP_Q07c',
+    'TX_RESP_Q07d', 'TX_RESP_Q07e',
+    'TX_RESP_Q11a', 'TX_RESP_Q11b', 'TX_RESP_Q11c',
+    'TX_RESP_Q15b'
+]
+
+colunas_aluno_booleanas_ABC = [
+    'TX_RESP_Q19'
+]
+
+colunas_aluno_ordinais_AD = [
+    'TX_RESP_Q23d'
+]
+
+colunas_aluno_categoricas = [
+    'TX_RESP_Q01', 'TX_RESP_Q02', 'TX_RESP_Q03',
+    'TX_RESP_Q04', 'TX_RESP_Q05a', 'TX_RESP_Q05b',
+    'TX_RESP_Q05c', 'TX_RESP_Q06', 'TX_RESP_Q08',
+    'TX_RESP_Q09', 'TX_RESP_Q10a', 'TX_RESP_Q10b',
+    'TX_RESP_Q10c', 'TX_RESP_Q10d', 'TX_RESP_Q10e',
+    'TX_RESP_Q10f', 'TX_RESP_Q12b', 'TX_RESP_Q12c',
+    'TX_RESP_Q14', 'TX_RESP_Q16', 'TX_RESP_Q17',
+    'TX_RESP_Q18', 'TX_RESP_Q21a', 'TX_RESP_Q21b',
+    'TX_RESP_Q21c', 'TX_RESP_Q21d', 'TX_RESP_Q21e',
+    'TX_RESP_Q24'
+]
+    
+
 # ================================================================
 # Mapeamentos normalizados [0,1]
 # ================================================================
@@ -169,6 +206,14 @@ mapa_bool = {
     'A': 0.0,
     'B': 1.0
 }
+
+mapa_bool_ABC = {
+    'A': 0.0,
+    'B': 1.0,
+    'C': 1.0
+}
+
+valores_invalidos = ['*', '.', 'F', '']
 
 # ================================================================
 # Conversão das respostas dos diretores
@@ -197,6 +242,52 @@ for col in colunas_diretor_booleanas:
             .map(mapa_bool)
             .astype('float32')
         )
+
+for col in colunas_aluno_categoricas:
+    if col in df_aluno_limpo.columns:
+        df_aluno_limpo[col] = (
+            df_aluno_limpo[col]
+            .replace(valores_invalidos, np.nan)
+        )
+
+for col in colunas_aluno_booleanas:
+    if col in df_aluno_limpo.columns:
+        df_aluno_limpo[col] = (
+            df_aluno_limpo[col]
+            .replace(valores_invalidos, np.nan)
+            .map(mapa_bool)
+            .astype('float32')
+        )
+
+for col in colunas_aluno_booleanas_ABC:
+    if col in df_aluno_limpo.columns:
+        df_aluno_limpo[col] = (
+            df_aluno_limpo[col]
+            .replace(valores_invalidos, np.nan)
+            .map(mapa_bool_ABC)
+            .astype('float32')
+        )
+
+for col in colunas_aluno_ordinais_AD:
+    if col in df_aluno_limpo.columns:
+        df_aluno_limpo[col] = (
+            df_aluno_limpo[col]
+            .replace(valores_invalidos, np.nan)
+            .map(mapa_AD)
+            .astype('float32')
+        )
+
+df_aluno_limpo['ID_AREA'] = (
+    df_aluno_limpo['ID_AREA']
+    .replace({
+        1: 0,
+        2: 1,
+    })
+    .astype('float32')
+)
+
+df_aluno_limpo['ID_UF'] = df_aluno_limpo['ID_UF'].astype('int8')
+df_aluno_limpo['ID_MUNICIPIO'] = df_aluno_limpo['ID_MUNICIPIO'].astype('int32')
 
 # Cada linha restante possui um diretor válido
 df_diretor_limpo['POSSUI_DIRETOR'] = np.int8(1)
@@ -245,15 +336,18 @@ print(
 # Merge final
 # ================================================================
 
+df_diretor_limpo_copy = df_diretor_limpo.copy()
+df_escola_limpo_copy = df_escola_limpo.copy()
+
 df_unificado = (
     df_aluno_limpo
     .merge(
-        df_diretor_limpo,
+        df_diretor_limpo_copy,
         on=['ID_ESCOLA', 'ID_SERIE'],
         how='left'
     )
     .merge(
-        df_escola_limpo,
+        df_escola_limpo_copy,
         on='ID_ESCOLA',
         how='left'
     )
@@ -285,7 +379,9 @@ print(
 print(f'Linhas finais: {len(df_unificado):,}')
 print("\n# ================================================================\n")
 
+# ================================================================
 # Adicionando a classificação de nível de acordo com a escala SAEB
+# ================================================================
 df_final = df_unificado.copy()
 
 def classificar_nivel_LP(nota_proficiencia):
@@ -331,10 +427,12 @@ def classificar_nivel_MT(nota_proficiencia):
         return 9
     elif nota_proficiencia >= 450:
         return 10
-
+   
 # Adicionando os níveis de proficiência de cada aluno e removendo as colunas originais de proficiência
+df_final['MEDIA_EM_NIVEL_LP'] = df_final['MEDIA_EM_LP'].apply(classificar_nivel_LP)
+df_final['MEDIA_EM_NIVEL_MT'] = df_final['MEDIA_EM_MT'].apply(classificar_nivel_MT)
 df_final['NIVEL_LP'] = df_final['PROFICIENCIA_LP_SAEB'].apply(classificar_nivel_LP)
 df_final['NIVEL_MT'] = df_final['PROFICIENCIA_MT_SAEB'].apply(classificar_nivel_MT)
-df_final = df_final.drop(columns=['PROFICIENCIA_LP_SAEB', 'PROFICIENCIA_MT_SAEB'])
+df_final = df_final.drop(columns=['PROFICIENCIA_LP_SAEB', 'PROFICIENCIA_MT_SAEB', 'MEDIA_EM_LP', 'MEDIA_EM_MT'])
 
-df_final.to_csv('dados/TS_FINAL.csv', index=False)
+df_final.tail(20)
