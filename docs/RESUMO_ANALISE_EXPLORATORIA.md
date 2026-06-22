@@ -2,7 +2,6 @@
 
 ## O que foi feito
 
-Foi criada uma **análise exploratória estruturada** no notebook `analise.ipynb` que cobre:
 
 ### 1. **Visão Geral dos Dados**
 - 1.514.448 amostras (alunos) com 82 features
