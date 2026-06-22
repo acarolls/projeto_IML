@@ -59,7 +59,7 @@ def obter_parametros(modelo):
 class MetricasValidacao:
     """Métricas produzidas pela validação cruzada."""
 
-    metricas_folds: pd.DataFrame
+    metricas_avaliacao: pd.DataFrame
     metricas_resumo: dict[str, float]
     matriz_confusao: np.ndarray
 
@@ -71,7 +71,7 @@ class ResultadoTreinamento:
     pipeline: Pipeline
     modelo: str
     alvo: str
-    metricas_folds: pd.DataFrame
+    metricas_avaliacao: pd.DataFrame
     metricas_resumo: dict[str, float]
     matriz_confusao: np.ndarray
 
@@ -94,7 +94,7 @@ def treinar_modelo(
         pipeline=pipeline,
         modelo=type(modelo).__name__,
         alvo=alvo,
-        metricas_folds=metricas.metricas_folds,
+        metricas_avaliacao=metricas.metricas_avaliacao,
         metricas_resumo=metricas.metricas_resumo,
         matriz_confusao=metricas.matriz_confusao,
     )
@@ -243,7 +243,7 @@ def avaliar_modelo(
         y_pred_test,
     )
 
-    metricas_folds = pd.DataFrame(
+    metricas_avaliacao = pd.DataFrame(
         [
             {
                 "accuracy_validacao": accuracy_val,
@@ -262,7 +262,7 @@ def avaliar_modelo(
     }
 
     return MetricasValidacao(
-        metricas_folds=metricas_folds,
+        metricas_avaliacao=metricas_avaliacao,
         metricas_resumo=metricas_resumo,
         matriz_confusao=matriz,
     )
