@@ -71,18 +71,20 @@ O `RandomForestClassifier` foi configurado com 300 árvores (`n_estimators=300`)
 
 Já o `XGBClassifier` utilizou 500 estimadores (`n_estimators=500`), profundidade máxima de 8 níveis (`max_depth=8`) e taxa de aprendizado de 0,05 (`learning_rate=0.05`), adotando valores intermediários que permitissem a execução dos experimentos em tempo viável. 
 
-Os hiperparâmetros pertencem à fábrica; a função de treinamento não fará busca automática. O retorno `ResultadoTreinamento` conterá o pipeline final, nome do modelo, alvo, métricas de cada fold e média e desvio-padrão das métricas.
+Os hiperparâmetros iniciais foram definidos nas fábricas, onde servem como ponto de partida para cada modelo. Durante o treinamento, é aplicada uma busca em grade (Grid Search) sobre um conjunto reduzido de combinações predefinidas para cada abordagem. Desta forma, podemos ajustar os principais hiperparâmetros paranão ultrapassar o custo computacional dos experimentos. 
+
+O retorno `ResultadoTreinamento` conterá o pipeline final, nome do modelo, alvo, métricas de cada fold e média e desvio-padrão das métricas.
 
 Uma fábrica, em vez de um estimador já criado, garante uma instância sem estado para cada fold e para o ajuste final. Isso impede que parâmetros aprendidos em uma rodada sejam reutilizados na seguinte. O contrato previsto para o resultado é:
 
 | Campo | Conteúdo |
 | --- | --- |
-| `pipeline` | pré-processador e estimador reajustados em todos os dados |
-| `modelo` | nome estável da configuração avaliada |
-| `alvo` | coluna de nível prevista |
-| `metricas_folds` | Macro F1 e balanced accuracy de cada fold |
-| `metricas_resumo` | média e desvio-padrão das métricas |
-| `matriz_confusao` | matriz agregada das previsões fora da amostra |
+| `pipeline` | pipeline treinado com o melhor conjunto de hiperparâmetros |
+| `modelo` | nome do algoritmo avaliado |
+| `alvo` | coluna de proficiência prevista |
+| `metricas_avaliacao` | métricas registradas durante as etapas de validação e teste |
+| `metricas_resumo` | resumo das métricas utilizadas na comparação dos modelos |
+| `matriz_confusao` | matriz de confusão produzida sobre o conjunto de teste |
 
 O pipeline fará todo o pré-processamento necessário. Variáveis numéricas terão imputação pela mediana e padronização; variáveis categóricas terão imputação pelo valor mais frequente e codificação one-hot. Como essas etapas ficam no mesmo objeto que o estimador, o pipeline treinado poderá receber novas linhas no mesmo formato da tabela processada e executar `predict` sem preparação manual paralela.
 
@@ -101,7 +103,7 @@ O Random Forest é utilizado por ser uma extensão baseada em ensembles de árvo
 O XGBoost foi incluído por ser um método amplamente utilizado em artigos científicos cujo objetivo é resolver problemas de dados tabulares estruturados, principalmente em contextos educacionais e de classificação multiclasse, pois ele é capaz de construir modelos sequenciais que corrigem erros das iterações anteriores.
 
 
-Todos os modelos seguem o mesmo pipeline de pré-processamento e exatamente as mesmas divisões de validação cruzada, o que possibilita e facilita a comparação entre as abordagens selecionadas. A diferença de desempenho observada entre eles é definida exclusivamente pela capacidade de modelagem de cada algoritmo.
+Todos os modelos seguem o mesmo pipeline de pré-processamento e exatamente as mesmas divisões de validação, o que possibilita e facilita a comparação entre as abordagens selecionadas. A diferença de desempenho observada entre eles é definida exclusivamente pela capacidade de modelagem de cada algoritmo.
 
 
 É importante ressaltar que a escolha desses modelos tem como propósito comparar diferentes abordagens de aprendizado sob a mesma estrutura de dados e avaliação. Isso permite analisar até que ponto as relações mais simples são suficientes ou se ganhos significativos são obtidos ao introduzir não linearidade e métodos baseados em ensembles.
@@ -112,39 +114,45 @@ A mediana é menos sensível a valores extremos que a média. A categoria mais f
 
 A padronização é essencial para KNN, que usa distâncias, e melhora a otimização da regressão logística quando as escalas numéricas diferem. Árvores e florestas não dependem da escala, mas podem compartilhar a mesma transformação sem mudar a ordem dos valores. Todo pré-processamento deve ser ajustado dentro de cada fold: calcular medianas, categorias ou escalas antes da divisão permitiria que a validação influenciasse o treino.
 
+## Validação e seleção de modelos
 
+Os dados foram divididos em três subconjuntos independentes:
 
-## Validação cruzada
+- Treinamento (~70%)
+- Validação (~15%)
+- Teste (~15%)
 
-Cada configuração será avaliada por validação cruzada estratificada e agrupada em cinco folds, usando `ID_ESCOLA` como grupo e `random_state=42`. A estratificação tenta manter proporções semelhantes dos níveis de proficiência em cada fold. O agrupamento mantém todos os estudantes de uma escola no mesmo fold; assim, atributos repetidos da escola ou da direção não aparecem simultaneamente no treino e na validação.
+A divisão foi realizada de forma estratificada, buscando preservar a distribuição dos níveis de proficiência em cada subconjunto. Dessa forma, evitamos que uma classe fique super ou sub-representada em alguma etapa do processo de treinamento e avaliação.
 
-Cinco folds oferecem um compromisso entre custo e estabilidade: cada ajuste usa aproximadamente 80% das escolas para treino e 20% para validação, repetindo o processo cinco vezes. Dez folds exigiriam aproximadamente o dobro de ajustes e deixariam conjuntos de validação menores. Uma única separação treino/teste seria mais barata, porém muito mais dependente da escolha aleatória das escolas.
+O conjunto de treinamento é utilizado para ajuste dos modelos e busca de hiperparâmetros. O conjunto de validação é utilizado para comparar diferentes configurações e selecionar aquelas que apresentam melhor capacidade de generalização. Já o conjunto de teste permanece isolado durante todo o processo e é utilizado apenas na avaliação final dos modelos.
 
-Em cada rodada, quatro folds treinam o pipeline completo e o fold restante mede o desempenho. Imputadores, codificadores e escaladores são ajustados somente nos quatro folds de treino, evitando vazamento de informação. Após as cinco rodadas, a mesma configuração é reajustada com todas as linhas e armazenada em `ResultadoTreinamento` para uso em previsões.
+Essa separação é importante porque um modelo pode apresentar excelente desempenho nos dados utilizados durante o treinamento e ainda assim falhar ao analisar novos estudantes. A utilização de um conjunto de validação permite verificar se os padrões aprendidos são realmente generalizáveis e não apenas resultado de sobreajuste aos dados de treinamento.
 
-A métrica principal será **Macro F1**. Para cada nível de proficiência, precisão mede quantos estudantes previstos naquele nível realmente pertencem a ele; recall mede quantos dos estudantes daquele nível foram identificados. O F1 é a média harmônica entre as duas medidas e só será alto quando ambas forem altas:
+Após a escolha da melhor configuração, o modelo é reajustado utilizando os dados de treinamento e validação. A avaliação final é então realizada sobre o conjunto de teste, fornecendo uma estimativa mais confiável do desempenho esperado em novos dados.
 
-$$
-F1_c = 2 \times \frac{precisao_c \times recall_c}{precisao_c + recall_c}
-$$
+### Busca de hiperparâmetros
 
-O cálculo é feito separadamente para cada uma das $C$ classes. Macro F1 é a média simples desses resultados:
+Embora cada algoritmo possua uma configuração inicial definida manualmente, o desempenho dos modelos pode variar significativamente de acordo com a escolha de seus hiperparâmetros. Por esse motivo, foi utilizada uma etapa de busca automática baseada em Grid Search (`GridSearchCV`).
 
-$$
-Macro\ F1 = \frac{1}{C}\sum_{c=1}^{C} F1_c
-$$
+O Grid Search avalia diferentes combinações de hiperparâmetros previamente definidas para cada algoritmo e identifica aquela que produz o melhor resultado segundo uma métrica de desempenho escolhida. Neste trabalho, a métrica utilizada para seleção foi o F1-Score Macro.
 
-Essa média dá a níveis raros a mesma importância dos níveis frequentes. Isso é adequado porque as faixas oficiais do Saeb provavelmente serão desbalanceadas: uma acurácia alta poderia esconder um modelo que acerta níveis intermediários numerosos, mas ignora os extremos. Por exemplo, se os F1 de três níveis forem 0,30, 0,70 e 0,80, o Macro F1 será `(0,30 + 0,70 + 0,80) / 3 = 0,60`, expondo o desempenho fraco no primeiro nível.
+A escolha do F1-Score Macro ocorreu porque os níveis de proficiência não apresentam distribuição uniforme. Em cenários desbalanceados, a acurácia pode produzir interpretações excessivamente otimistas ao favorecer classes mais frequentes. O F1-Score Macro atribui o mesmo peso a todas as classes, permitindo uma avaliação mais equilibrada do desempenho dos modelos.
 
-Serão registrados também balanced accuracy, que resume o recall médio das classes, e a matriz de confusão, que mostra quais níveis são confundidos entre si. Esta última é necessária porque Macro F1 penaliza da mesma forma a confusão entre níveis vizinhos e a confusão entre níveis distantes. A comparação dos cinco algoritmos usará primeiro o Macro F1 médio e considerará também seu desvio entre folds.
+A busca foi realizada utilizando validação cruzada interna com três partições (`cv=3`). Para cada combinação de hiperparâmetros, o conjunto de treinamento é dividido em três subconjuntos, permitindo avaliar a estabilidade da configuração antes de aplicá-la aos dados de validação.
 
-Os folds devem ser gerados uma única vez e reutilizados para todos os modelos. Cada classe precisa ocorrer em pelo menos cinco escolas distintas; caso contrário, a validação em cinco grupos não é válida e a execução deve falhar com uma mensagem clara, sem migrar silenciosamente para uma divisão por estudante. A matriz de confusão agregada deve usar somente previsões feitas quando cada observação estava fora do treino.
+Os principais hiperparâmetros avaliados foram:
 
-Não haverá ajuste automático de hiperparâmetros nesta etapa. Escolher hiperparâmetros com base nos mesmos cinco folds e depois apresentar suas métricas como estimativa final produziria uma avaliação otimista. Se busca de hiperparâmetros for adicionada, ela deverá usar validação aninhada ou um conjunto de teste externo mantido intocado.
+- KNN: quantidade de vizinhos (`n_neighbors`);
+- Regressão Logística: fator de regularização (`C`);
+- Árvore de Decisão: profundidade máxima (`max_depth`);
+- Random Forest: número de árvores (`n_estimators`);
+- XGBoost: profundidade máxima (`max_depth`) e taxa de - aprendizado (`learning_rate`).
 
-## Experimentos exploratórios
+Ao final desse processo, a configuração com melhor F1-Score Macro é selecionada e utilizada nas etapas posteriores de avaliação.
 
-Além da validação cruzada utilizada como método principal de avaliação dos modelos, foi criado um notebook de testes (`teste_modelos.ipynb`) com o objetivo de verificar o funcionamento do pipeline e observar o comportamento dos modelos em uma execução direta.
+### Experimentos exploratórios
+
+Além da validação utilizada como método principal de avaliação dos modelos, foi criado um notebook de testes (`teste_modelos.ipynb`) com o objetivo de verificar o funcionamento do pipeline e observar o comportamento dos modelos em uma execução direta.
 
 Nesse experimento, cada modelo foi treinado e avaliado de forma isolada, permitindo a análise de métricas como precision, recall e F1-score, além do tempo de execução do treinamento e da predição. Também foram observados os parâmetros utilizados na configuração do modelo e do pipeline.
 
@@ -152,7 +160,7 @@ Esses testes foram feitos com dados sintéticos, composto por 50.000 observaçõ
 
 Os resultados obtidos revelaram diferenças significativas entre os modelos tanto em desempenho quanto em custo computacional. Métodos baseados em ensembles, como Random Forest e XGBoost, apresentaram melhor desempenho no conjunto sintético, porém com maior tempo de treinamento quando comparados a modelos mais simples.
 
-Vale ressaltar que o propósito desta avaliação não é medir o desempenho real dos modelos no problema estudado, mas sim analisar o comportamento e o custo computacional das abordagens em um ambiente controlado. Portanto, esses testes não substituem a validação cruzada, porém servem como uma verificação complementar.
+Vale ressaltar que o propósito desta avaliação não é medir o desempenho real dos modelos no problema estudado, mas sim analisar o comportamento e o custo computacional das abordagens em um ambiente controlado. Portanto, esses testes não substituem a validação principal, porém servem como uma verificação complementar.
 
 ## Interpretação e limitações
 
