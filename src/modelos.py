@@ -15,7 +15,7 @@ def criar_regressao_logistica():
         max_iter=1000,
     )
 
-def criar_arvore_regressao():
+def criar_arvore_decisao():
     return DecisionTreeClassifier(
         max_depth=20,
         random_state=42
