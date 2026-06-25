@@ -18,7 +18,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
-from sklearn.utils.validation import has_fit_parameter
+from sklearn.utils.validation import check_is_fitted, has_fit_parameter
 from sklearn.model_selection import (
     StratifiedGroupKFold,
     GridSearchCV,
@@ -39,6 +39,7 @@ class PipelineClassificacao(Pipeline):
 
     @property
     def classes_(self):
+        check_is_fitted(self, "classes_originais_")
         return self.classes_originais_
 
     def fit(self, X, y=None, **params):
@@ -73,13 +74,15 @@ class PipelineClassificacao(Pipeline):
         return super().fit(X, y_codificado, **params)
 
     def predict(self, X, **params):
+        check_is_fitted(self, "codificador_alvo_")
         predicoes = super().predict(X, **params)
-
-        if not hasattr(self, "codificador_alvo_"):
-            return predicoes
 
         predicoes = np.asarray(predicoes, dtype=int)
         return self.codificador_alvo_.inverse_transform(predicoes)
+
+    def predict_proba(self, X, **params):
+        check_is_fitted(self, "codificador_alvo_")
+        return super().predict_proba(X, **params)
 
 COLUNAS_ALVO = {
     "NIVEL_LP",
@@ -490,7 +493,7 @@ def avaliar_modelo(
         ),
         "accuracy_teste": accuracy_test,
         "f1_macro_teste": f1_test,
-        "n_splits_validacao": float(n_splits_validacao),
+        "n_splits_validacao": n_splits_validacao,
     }
 
     return MetricasValidacao(

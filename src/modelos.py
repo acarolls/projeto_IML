@@ -6,7 +6,8 @@ from xgboost import XGBClassifier
 
 def criar_knn():
     return KNeighborsClassifier(
-        n_neighbors=5
+        n_neighbors=5,
+        weights="distance",
     )
 
 
@@ -27,14 +28,14 @@ def criar_random_forest():
     return RandomForestClassifier(
         n_estimators=300,
         random_state=42,
-        n_jobs=4,
+        n_jobs=1,
         class_weight="balanced_subsample",
     )
 
 
 def criar_xgboost():
     return XGBClassifier(
-        n_estimators=500,
+        n_estimators=200,
         max_depth=8,
         learning_rate=0.05,
         subsample=0.8,
@@ -43,5 +44,5 @@ def criar_xgboost():
         eval_metric="mlogloss",
         tree_method="hist",
         random_state=42,
-        n_jobs=4
+        n_jobs=1,
     )
