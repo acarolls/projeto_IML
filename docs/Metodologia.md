@@ -150,18 +150,6 @@ Os principais hiperparâmetros avaliados foram:
 
 Ao final desse processo, a configuração com melhor F1-Score Macro é selecionada e utilizada nas etapas posteriores de avaliação.
 
-### Experimentos exploratórios
-
-Além da validação utilizada como método principal de avaliação dos modelos, foi criado um notebook de testes (`teste_modelos.ipynb`) com o objetivo de verificar o funcionamento do pipeline e observar o comportamento dos modelos em uma execução direta.
-
-Nesse experimento, cada modelo foi treinado e avaliado de forma isolada, permitindo a análise de métricas como precision, recall e F1-score, além do tempo de execução do treinamento e da predição. Também foram observados os parâmetros utilizados na configuração do modelo e do pipeline.
-
-Esses testes foram feitos com dados sintéticos, composto por 50.000 observações, 50 atributos, dos quais 20 foram definidos como atributos informativos para o processo de classificação, distribuídas em três classes. A divisão entre treino e teste foi realizada na proporção de 80% e 20%, utilizando estratificação das classes e `random_state=42` para garantir reprodutibilidade. 
-
-Os resultados obtidos revelaram diferenças significativas entre os modelos tanto em desempenho quanto em custo computacional. Métodos baseados em ensembles, como Random Forest e XGBoost, apresentaram melhor desempenho no conjunto sintético, porém com maior tempo de treinamento quando comparados a modelos mais simples.
-
-Vale ressaltar que o propósito desta avaliação não é medir o desempenho real dos modelos no problema estudado, mas sim analisar o comportamento e o custo computacional das abordagens em um ambiente controlado. Portanto, esses testes não substituem a validação principal, porém servem como uma verificação complementar.
-
 ## Interpretação e limitações
 
 - Desempenho preditivo não demonstra que uma variável causa maior ou menor proficiência.

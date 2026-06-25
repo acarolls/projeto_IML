@@ -37,3 +37,4 @@ dados/
 # Local training artifacts
 artefatos/*
 !artefatos/.gitignore
+catboost_info/
