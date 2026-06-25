@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Predição de Desempenho Escolar | SAEB 2023</title>
+    <meta
+      name="description"
+      content="Apresentação do projeto de Machine Learning para predição de níveis de proficiência SAEB."
+    >
+    <link rel="stylesheet" href="slides/styles.css">
+  </head>
+  <body>
+    <main class="deck" aria-live="polite">
+      <section class="slide title-slide" data-kicker="Projeto IML">
+        <div class="school-mark" aria-hidden="true">
+          <span class="pencil"></span>
+          <span class="notebook"></span>
+        </div>
+        <p class="eyebrow">Machine Learning aplicado aos microdados SAEB 2023</p>
+        <h1>Predição de Desempenho Escolar</h1>
+        <p class="subtitle">
+          Classificação dos níveis de proficiência em Língua Portuguesa e Matemática
+          para estudantes do 3º/4º ano do Ensino Médio.
+        </p>
+        <div class="team-grid">
+          <span>Ana Caroline Souza Lira</span>
+          <span>Daniel Goulart Camacho Gonçalves</span>
+          <span>Fernando Giongo</span>
+          <span>Theo Luigi</span>
+          <span>João Gabriel Lourenço Marques</span>
+        </div>
+      </section>
+
+      <section class="slide agenda-slide" data-kicker="Roteiro">
+        <h2>15 minutos, cinco perguntas</h2>
+        <div class="agenda">
+          <article>
+            <strong>1</strong>
+            <span>Que dados usamos?</span>
+          </article>
+          <article>
+            <strong>2</strong>
+            <span>Como tratamos e unificamos?</span>
+          </article>
+          <article>
+            <strong>3</strong>
+            <span>Como evitamos vazamento?</span>
+          </article>
+          <article>
+            <strong>4</strong>
+            <span>Como treinamos e avaliamos?</span>
+          </article>
+          <article>
+            <strong>5</strong>
+            <span>O que os resultados significam?</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Dados">
+        <h2>Base: microdados SAEB 2023</h2>
+        <div class="two-col">
+          <div>
+            <p class="lead">
+              O projeto combina informações do aluno, da direção e da escola para
+              estimar níveis de proficiência.
+            </p>
+            <ul class="check-list">
+              <li><strong>TS_ALUNO_34EM</strong>: proficiência e questionário socioeconômico.</li>
+              <li><strong>TS_DIRETOR</strong>: gestão, infraestrutura e organização escolar.</li>
+              <li><strong>TS_ESCOLA</strong>: indicadores agregados da unidade escolar.</li>
+              <li>Junção principal por <code>ID_ESCOLA</code>, respeitando a série quando necessário.</li>
+            </ul>
+          </div>
+          <div class="metric-board">
+            <div>
+              <strong>1,51 mi</strong>
+              <span>registros após filtros iniciais</span>
+            </div>
+            <div>
+              <strong>80</strong>
+              <span>colunas na base de modelagem</span>
+            </div>
+            <div>
+              <strong>SAEB</strong>
+              <span>escala oficial de proficiência</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Amostra final">
+        <h2>Base usada na modelagem</h2>
+        <div class="two-col align-start">
+          <div>
+            <p class="lead small">
+              Após filtros, imputações e remoção do nível 0, a execução final usa uma
+              amostra estratificada de 20% para viabilizar treinamento com validação cruzada.
+            </p>
+            <div class="metric-strip">
+              <article><strong>199.626</strong><span>linhas na base de modelagem</span></article>
+              <article><strong>80</strong><span>colunas antes da remoção de vazamento</span></article>
+              <article><strong>20%</strong><span>amostra estratificada por <code>NIVEL_LP</code></span></article>
+            </div>
+            <div class="callout compact-callout">
+              Mesmo com 20% da base, as classes extremas continuam pequenas:
+              LP nível 8 tem 206 exemplos; MT nível 10 tem 14 exemplos.
+            </div>
+          </div>
+          <div class="imbalance-board">
+            <h3>Desequilíbrio após filtro</h3>
+            <div class="imbalance-row"><span>LP maior classe</span><strong>45.959</strong><small>Nível 3</small></div>
+            <div class="imbalance-row"><span>LP menor classe</span><strong>206</strong><small>Nível 8</small></div>
+            <div class="imbalance-row"><span>MT maior classe</span><strong>48.715</strong><small>Nível 2</small></div>
+            <div class="imbalance-row"><span>MT menor classe</span><strong>14</strong><small>Nível 10</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Tratamento">
+        <h2>Tratamento do dataset</h2>
+        <div class="process">
+          <article>
+            <span class="badge red">1</span>
+            <h3>Filtrar registros inválidos</h3>
+            <p>Removemos ausências de prova, proficiência inválida, questionários não respondidos e escolas fora do escopo.</p>
+          </article>
+          <article>
+            <span class="badge yellow">2</span>
+            <h3>Normalizar respostas</h3>
+            <p>Valores como <code>*</code>, <code>.</code> e <code>F</code> viram ausentes. Respostas ordinais e booleanas são convertidas quando há sentido semântico.</p>
+          </article>
+          <article>
+            <span class="badge blue">3</span>
+            <h3>Preservar informação útil</h3>
+            <p>Quando não há diretor associado, mantemos um marcador de ausência em vez de descartar automaticamente o aluno.</p>
+          </article>
+          <article>
+            <span class="badge green">4</span>
+            <h3>Imputar dados faltantes</h3>
+            <p>Usamos mediana para numéricas e moda para categóricas, incluindo regras agrupadas por município/UF quando apropriado.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Features">
+        <h2>Engenharia e imputação</h2>
+        <div class="dense-grid">
+          <article>
+            <h3>Conversões semânticas</h3>
+            <ul>
+              <li>Questões booleanas: alternativas A/B viram 0/1.</li>
+              <li>Questões ordinais: respostas de concordância/adequação viram escala numérica normalizada.</li>
+              <li>Questões nominais permanecem categóricas para one-hot encoding.</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Ausentes explícitos</h3>
+            <ul>
+              <li><code>*</code>, <code>.</code>, <code>F</code> e vazio são tratados como ausentes.</li>
+              <li>Dados de diretor ausentes preservam sinal via indicador de ausência.</li>
+              <li>Valores ausentes não são removidos em massa antes do pipeline.</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Imputação no notebook</h3>
+            <ul>
+              <li>Médias escolares: mediana por UF ou mediana global.</li>
+              <li>Questionários numéricos: mediana por grupo quando aplicável.</li>
+              <li>Categóricas: moda por município/UF ou moda global.</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Imputação no pipeline</h3>
+            <ul>
+              <li>Numéricas: <code>SimpleImputer(strategy="median")</code>.</li>
+              <li>Categóricas: <code>most_frequent</code>.</li>
+              <li>Novas categorias: <code>OneHotEncoder(handle_unknown="ignore")</code>.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Alvos">
+        <h2>O que o modelo prevê?</h2>
+        <div class="two-col align-start">
+          <div class="target-card lp">
+            <h3>Língua Portuguesa</h3>
+            <p>Classes ativas: níveis <strong>1 a 8</strong>.</p>
+            <div class="level-strip" aria-label="Níveis LP">
+              <span>1</span><span>2</span><span>3</span><span>4</span>
+              <span>5</span><span>6</span><span>7</span><span>8</span>
+            </div>
+          </div>
+          <div class="target-card mt">
+            <h3>Matemática</h3>
+            <p>Classes ativas: níveis <strong>1 a 10</strong>.</p>
+            <div class="level-strip" aria-label="Níveis MT">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+              <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>Importante:</strong> removemos o nível 0 antes da modelagem e tratamos os níveis
+          como classes distintas. Um erro entre níveis vizinhos ainda conta como erro completo.
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Distribuição">
+        <h2>Distribuição dos alvos ativos</h2>
+        <div class="dist-grid">
+          <article>
+            <h3>NIVEL_LP</h3>
+            <div class="dist-row"><span>1</span><i style="width: 57.6%"></i><strong>26.490</strong></div>
+            <div class="dist-row"><span>2</span><i style="width: 82.1%"></i><strong>37.750</strong></div>
+            <div class="dist-row"><span>3</span><i style="width: 100%"></i><strong>45.959</strong></div>
+            <div class="dist-row"><span>4</span><i style="width: 95.3%"></i><strong>43.781</strong></div>
+            <div class="dist-row"><span>5</span><i style="width: 64.8%"></i><strong>29.766</strong></div>
+            <div class="dist-row"><span>6</span><i style="width: 27.6%"></i><strong>12.687</strong></div>
+            <div class="dist-row"><span>7</span><i style="width: 6.5%"></i><strong>2.987</strong></div>
+            <div class="dist-row"><span>8</span><i style="width: 0.45%"></i><strong>206</strong></div>
+          </article>
+          <article>
+            <h3>NIVEL_MT</h3>
+            <div class="dist-row"><span>1</span><i style="width: 79.9%"></i><strong>38.926</strong></div>
+            <div class="dist-row"><span>2</span><i style="width: 100%"></i><strong>48.715</strong></div>
+            <div class="dist-row"><span>3</span><i style="width: 96.5%"></i><strong>47.001</strong></div>
+            <div class="dist-row"><span>4</span><i style="width: 65.9%"></i><strong>32.086</strong></div>
+            <div class="dist-row"><span>5</span><i style="width: 37.7%"></i><strong>18.389</strong></div>
+            <div class="dist-row"><span>6</span><i style="width: 18.3%"></i><strong>8.908</strong></div>
+            <div class="dist-row"><span>7</span><i style="width: 7.4%"></i><strong>3.601</strong></div>
+            <div class="dist-row"><span>8</span><i style="width: 3.2%"></i><strong>1.543</strong></div>
+            <div class="dist-row"><span>9</span><i style="width: 0.9%"></i><strong>443</strong></div>
+            <div class="dist-row"><span>10</span><i style="width: 0.03%"></i><strong>14</strong></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Metodologia">
+        <h2>Pipeline sem vazamento</h2>
+        <div class="flow">
+          <div>Base tratada</div>
+          <span></span>
+          <div>Amostra estratificada 20%</div>
+          <span></span>
+          <div>Remoção de vazamento</div>
+          <span></span>
+          <div>Pipeline sklearn</div>
+          <span></span>
+          <div>GridSearchCV</div>
+        </div>
+        <div class="three-col compact">
+          <article>
+            <h3>Sem vazamento</h3>
+            <p>Saem proficiências brutas, médias escolares ligadas ao alvo, identificadores e os próprios alvos.</p>
+          </article>
+          <article>
+            <h3>Pré-processamento</h3>
+            <p>Mediana + escala para numéricas; moda + one-hot para categóricas.</p>
+          </article>
+          <article>
+            <h3>Validação</h3>
+            <p><code>StratifiedGroupKFold</code>, agrupando por escola para evitar memorizar unidades escolares.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Contrato técnico">
+        <h2>O que entra no modelo?</h2>
+        <div class="contract-grid">
+          <article class="contract-card keep">
+            <h3>Entram como preditores</h3>
+            <p>Respostas do questionário, variáveis socioeconômicas, características da escola e variáveis administrativas sem ligação direta com o alvo.</p>
+          </article>
+          <article class="contract-card remove">
+            <h3>Removidas por vazamento</h3>
+            <p><code>PROFICIENCIA_LP_SAEB</code>, <code>PROFICIENCIA_MT_SAEB</code>, <code>MEDIA_EM_LP</code>, <code>MEDIA_EM_MT</code>, níveis derivados e médias de nível.</p>
+          </article>
+          <article class="contract-card group">
+            <h3>Usada só para grupos</h3>
+            <p><code>ID_ESCOLA</code> não é feature; ela define grupos no <code>StratifiedGroupKFold</code>, reduzindo memorização de escolas.</p>
+          </article>
+        </div>
+        <table class="metrics-table dense-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Tratamento</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Numéricas</td>
+              <td>Mediana + <code>StandardScaler</code></td>
+              <td>Compatível com KNN/LogReg e robusto a outliers.</td>
+            </tr>
+            <tr>
+              <td>Categóricas</td>
+              <td>Moda + <code>OneHotEncoder</code></td>
+              <td>Evita impor ordem artificial às alternativas.</td>
+            </tr>
+            <tr>
+              <td>Alvo</td>
+              <td><code>LabelEncoder</code> interno</td>
+              <td>Permite XGBoost e preserva rótulos originais na saída.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="slide" data-kicker="Modelos">
+        <h2>Modelos avaliados</h2>
+        <div class="model-grid">
+          <article><span>LR</span><strong>Regressão Logística</strong><small>baseline linear balanceado</small></article>
+          <article><span>KNN</span><strong>K-Nearest Neighbors</strong><small>similaridade entre perfis</small></article>
+          <article><span>DT</span><strong>Árvore de Decisão</strong><small>regras hierárquicas</small></article>
+          <article><span>RF</span><strong>Random Forest</strong><small>ensemble de árvores</small></article>
+          <article><span>XGB</span><strong>XGBoost</strong><small>boosting para dados tabulares</small></article>
+        </div>
+        <p class="footnote">
+          A seleção usa <strong>F1-macro</strong>, porque acurácia pode favorecer classes frequentes em dados desbalanceados.
+        </p>
+      </section>
+
+      <section class="slide" data-kicker="Validação">
+        <h2>Validação e busca de hiperparâmetros</h2>
+        <div class="two-col align-start">
+          <div class="protocol-card">
+            <h3>Protocolo</h3>
+            <ol>
+              <li>Separação externa com <code>StratifiedGroupKFold</code> e até 7 splits.</li>
+              <li>Primeiro fold externo fica como teste.</li>
+              <li><code>GridSearchCV</code> roda nos dados restantes com até 3 splits internos.</li>
+              <li>Critério de seleção: <code>f1_macro</code>.</li>
+              <li>Pipeline final é reajustado na base completa de modelagem.</li>
+            </ol>
+          </div>
+          <table class="metrics-table dense-table grid-table">
+            <thead>
+              <tr><th>Modelo</th><th>Grid avaliado</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>KNN</td><td><code>n_neighbors = 3, 5, 7</code></td></tr>
+              <tr><td>LogReg</td><td><code>C = 0.1, 1.0, 10.0</code></td></tr>
+              <tr><td>Árvore</td><td><code>max_depth = 5, 10, 20</code></td></tr>
+              <tr><td>Random Forest</td><td><code>n_estimators = 100, 300</code></td></tr>
+              <tr><td>XGBoost</td><td><code>max_depth = 4, 8</code>; <code>lr = 0.05, 0.1</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout compact-callout">
+          Execução sequencial com <code>GRID_N_JOBS=1</code>, checkpoint em <code>artefatos/</code> e retomada por combinação alvo/modelo.
+        </div>
+      </section>
+
+      <section class="slide" data-kicker="Métricas">
+        <h2>Resumo dos resultados</h2>
+        <div class="results-grid">
+          <article class="result-card primary">
+            <h3>Melhor F1-macro em LP</h3>
+            <strong>17,5%</strong>
+            <span>XGBoost · acurácia 22,1%</span>
+          </article>
+          <article class="result-card primary">
+            <h3>Melhor F1-macro em MT</h3>
+            <strong>14,9%</strong>
+            <span>XGBoost · acurácia 22,6%</span>
+          </article>
+          <article class="result-card muted">
+            <h3>Baseline aleatório</h3>
+            <strong>12,5% / 10,0%</strong>
+            <span>LP com 8 classes · MT com 10 classes</span>
+          </article>
+        </div>
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th>Alvo</th>
+              <th>Modelo</th>
+              <th>Acurácia teste</th>
+              <th>F1-macro teste</th>
+              <th>Melhores parâmetros</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>LP</td>
+              <td>XGBoost</td>
+              <td>22,1%</td>
+              <td>17,5%</td>
+              <td><code>learning_rate=0.1, max_depth=8</code></td>
+            </tr>
+            <tr>
+              <td>MT</td>
+              <td>XGBoost</td>
+              <td>22,6%</td>
+              <td>14,9%</td>
+              <td><code>learning_rate=0.1, max_depth=8</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="slide" data-kicker="Resultados completos">
+        <h2>Desempenho por alvo e modelo</h2>
+        <table class="metrics-table dense-table full-results">
+          <thead>
+            <tr>
+              <th>Alvo</th>
+              <th>Modelo</th>
+              <th>Acc. validação</th>
+              <th>F1 validação</th>
+              <th>Acc. teste</th>
+              <th>F1 teste</th>
+              <th>Melhor parâmetro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>LP</td><td>XGBoost</td><td>22,55%</td><td>17,72%</td><td>22,05%</td><td>17,54%</td><td><code>lr=0.1, depth=8</code></td></tr>
+            <tr><td>LP</td><td>Random Forest</td><td>24,85%</td><td>14,82%</td><td>24,76%</td><td>14,92%</td><td><code>n=100</code></td></tr>
+            <tr><td>LP</td><td>Árvore</td><td>19,10%</td><td>14,75%</td><td>19,11%</td><td>14,82%</td><td><code>depth=20</code></td></tr>
+            <tr><td>LP</td><td>Regressão</td><td>17,69%</td><td>14,57%</td><td>17,58%</td><td>14,58%</td><td><code>C=1.0</code></td></tr>
+            <tr><td>LP</td><td>KNN</td><td>21,34%</td><td>14,09%</td><td>21,43%</td><td>14,15%</td><td><code>k=7</code></td></tr>
+            <tr><td>MT</td><td>XGBoost</td><td>22,58%</td><td>15,20%</td><td>22,59%</td><td>14,88%</td><td><code>lr=0.1, depth=8</code></td></tr>
+            <tr><td>MT</td><td>Regressão</td><td>20,01%</td><td>12,77%</td><td>20,55%</td><td>12,94%</td><td><code>C=0.1</code></td></tr>
+            <tr><td>MT</td><td>Árvore</td><td>18,89%</td><td>11,90%</td><td>18,90%</td><td>11,98%</td><td><code>depth=20</code></td></tr>
+            <tr><td>MT</td><td>KNN</td><td>20,76%</td><td>11,49%</td><td>21,04%</td><td>11,33%</td><td><code>k=3</code></td></tr>
+            <tr><td>MT</td><td>Random Forest</td><td>25,08%</td><td>10,41%</td><td>25,55%</td><td>10,82%</td><td><code>n=100</code></td></tr>
+          </tbody>
+        </table>
+        <p class="footnote">
+          Acurácia maior nem sempre significa modelo melhor: Random Forest em MT tem maior acurácia,
+          mas pior F1-macro, indicando concentração nas classes frequentes.
+        </p>
+      </section>
+
+      <section class="slide" data-kicker="Comparação">
+        <h2>F1-macro por modelo</h2>
+        <div class="bar-panel">
+          <div class="bar-chart" aria-label="F1-macro por modelo">
+            <div class="bar-row">
+              <span>LP · XGBoost</span><div><i style="width: 87.5%"></i></div><strong>17,5%</strong>
+            </div>
+            <div class="bar-row">
+              <span>LP · Random Forest</span><div><i style="width: 74.5%"></i></div><strong>14,9%</strong>
+            </div>
+            <div class="bar-row">
+              <span>LP · Árvore</span><div><i style="width: 74.0%"></i></div><strong>14,8%</strong>
+            </div>
+            <div class="bar-row">
+              <span>MT · XGBoost</span><div><i style="width: 74.4%"></i></div><strong>14,9%</strong>
+            </div>
+            <div class="bar-row">
+              <span>MT · Regressão</span><div><i style="width: 64.7%"></i></div><strong>12,9%</strong>
+            </div>
+            <div class="bar-row">
+              <span>MT · Random Forest</span><div><i style="width: 54.1%"></i></div><strong>10,8%</strong>
+            </div>
+          </div>
+          <aside>
+            <h3>Leitura correta</h3>
+            <p>
+              Random Forest alcança boa acurácia em alguns casos, mas F1-macro menor
+              indica concentração em classes frequentes.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="slide matrix-slide" data-kicker="Matriz de confusão">
+        <h2>XGBoost · Língua Portuguesa</h2>
+        <p class="lead small">
+          O lado esquerdo mostra contagens absolutas; o direito mostra percentuais por classe real.
+          A diagonal indica acertos.
+        </p>
+        <figure class="matrix-figure">
+          <img src="slides/assets/confusion-lp-xgboost.png" alt="Matriz de confusão do XGBoost para Língua Portuguesa">
+        </figure>
+      </section>
+
+      <section class="slide matrix-slide" data-kicker="Matriz de confusão">
+        <h2>XGBoost · Matemática</h2>
+        <p class="lead small">
+          O desbalanceamento é mais severo em Matemática, especialmente nos níveis altos,
+          reduzindo recall e F1-macro.
+        </p>
+        <figure class="matrix-figure">
+          <img src="slides/assets/confusion-mt-xgboost.png" alt="Matriz de confusão do XGBoost para Matemática">
+        </figure>
+      </section>
+
+      <section class="slide" data-kicker="Conclusão">
+        <h2>Resultado: limitado, mas acima do acaso</h2>
+        <div class="two-col align-start">
+          <div>
+            <p class="lead">
+              Os modelos encontram sinal estatístico real nos dados contextuais,
+              mas não o suficiente para uma classificação individual precisa.
+            </p>
+            <ul class="check-list">
+              <li>Melhor resultado supera o baseline aleatório uniforme.</li>
+              <li>F1-macro ainda é baixo, principalmente por classes raras.</li>
+              <li>Erros entre níveis vizinhos ainda contam como erro completo.</li>
+            </ul>
+          </div>
+          <div class="chalk-card">
+            <h3>Hipótese principal</h3>
+            <p>
+              Questionários e contexto escolar explicam tendências gerais de desempenho,
+              mas não capturam diretamente domínio de conteúdo, trajetória individual,
+              motivação no dia da prova ou fatores pedagógicos finos.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide closing-slide" data-kicker="Próximos passos">
+        <h2>Como melhorar?</h2>
+        <div class="next-steps">
+          <article>
+            <strong>01</strong>
+            <span>Tratar o problema como classificação ordinal.</span>
+          </article>
+          <article>
+            <strong>02</strong>
+            <span>Agrupar níveis em faixas baixo, médio e alto.</span>
+          </article>
+          <article>
+            <strong>03</strong>
+            <span>Testar regressão da proficiência contínua antes da conversão para nível.</span>
+          </article>
+          <article>
+            <strong>04</strong>
+            <span>Avaliar técnicas específicas para classes raras.</span>
+          </article>
+        </div>
+        <p class="final-line">Obrigado.</p>
+      </section>
+    </main>
+
+    <nav class="controls" aria-label="Navegação dos slides">
+      <button id="prev-slide" type="button" aria-label="Slide anterior">←</button>
+      <span id="slide-count">1 / 19</span>
+      <button id="next-slide" type="button" aria-label="Próximo slide">→</button>
+    </nav>
+    <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <script src="slides/deck.js"></script>
+  </body>
+</html>
