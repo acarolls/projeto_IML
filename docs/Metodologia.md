@@ -2,174 +2,163 @@
 
 ## Visão geral
 
-O projeto tem por objetivo prever os níveis Saeb de proficiência em Lingua Portuguesa (LP) ou Matemática (MT) de alunos do 3º e 4º Anos do Ensino Médio. Para isso, utilizaremos classificadores de Aprendizado de Máquina em cima dos microdados do Saeb de 2023 e a biblioteca Pandas do Python.
+O projeto busca prever os níveis Saeb de proficiência em Língua Portuguesa (`NIVEL_LP`) e Matemática (`NIVEL_MT`) de estudantes do 3º/4º ano do Ensino Médio, usando microdados do Saeb 2023. O fluxo final está consolidado em `NotebookFinal.ipynb` e a parte reutilizável da modelagem está em `src/modelagem.py` e `src/modelos.py`.
 
-O objetivo não é reproduzir a nota do estudante, mas investigar quanto características pessoais, familiares e escolares conseguem distinguir faixas oficiais de desempenho.
+O objetivo não é reproduzir diretamente a nota do estudante, mas avaliar quanto características pessoais, socioeconômicas e escolares conseguem distinguir faixas oficiais de desempenho sem vazamento de informação.
 
 ```text
-Tabelas brutas "Aluno", "Diretor" e "Escola" -> Limpeza e adequação de features -> Junção das tabelas -> Adicionamos o nível Saeb -> Análise Exploratória -> Pipeline de atributos -> validação cruzada -> Modelos -> Métricas
+Tabelas brutas -> filtros e seleção de features -> junção por escola/série
+-> criação dos níveis Saeb -> análise exploratória -> imputação de ausentes
+-> amostragem de modelagem -> pipeline de treinamento -> métricas e conclusão
 ```
 
 ## Preparação dos dados
 
-1. Ler `TS_ALUNO_34EM.csv`, `TS_DIRETOR.csv` e `TS_ESCOLA.csv`.
-2. Removemos dados incompletos das tabelas, utilizando atributos de controle, como `IN_PRESENCA_LP` e `IN_PREENCHIMENTO_QUESTIONARIO`.
-3. Removemos dados que não são relevantes para nossa análise, como diretores de outras séries que não sejam do Ensino Médio, ou escolas que não possuem Ensino Médio.
-4. Verificamos se temos alunos, diretores ou escolas duplicadas.
-5. Realizamos adaptações nas features de diretor de categórica para numérica.
-6. Realizamos a junção das 3 tabelas de dados.
-7. Adicionamos marcador de ausência de diretor e trocamos a nota de proficiência pelo nível Saeb.
+O notebook lê as tabelas `TS_ALUNO_34EM.csv`, `TS_DIRETOR.csv` e `TS_ESCOLA.csv` a partir de `dados/`, usando separador `;` e codificação `latin-1`.
 
-### Justificativa dos filtros e da junção
+As principais etapas de preparação são:
 
-A justificativa para esse processo é enriquecer a tabela de alunos com dados que podem ser impactantes no desempenho de estudantes como informações socioeconomicas, estruturais da escola, infraestrutura entre outros.
+- Remover alunos sem presença, sem proficiência válida ou sem preenchimento do questionário.
+- Remover diretores sem questionário preenchido e registros de séries fora do escopo do Ensino Médio.
+- Remover escolas sem alunos presentes no Ensino Médio.
+- Selecionar apenas colunas ligadas ao contexto do aluno, direção e escola.
+- Tratar respostas inválidas (`*`, `.`, `F` e vazios) como ausentes.
+- Converter respostas booleanas e ordinais quando há interpretação natural de ordem.
+- Unificar as tabelas usando `ID_ESCOLA` e a série quando aplicável.
+- Criar indicador de ausência de diretor para preservar informação sobre escolas sem questionário de direção.
+- Criar `NIVEL_LP` e `NIVEL_MT` a partir das proficiências brutas.
 
-Escolhemos um conjunto de features do dataset tendo em vista sua descrição no dicionário de dados. Nesse momento de escolha das features, ainda não teremos certeza sobre sua relevância global, no entanto inferimos que poderiam fazer parte do nosso escopo.
+Após a análise exploratória, o notebook imputa ausências remanescentes na base final antes da modelagem. Médias escolares de proficiência, quando ausentes, são preenchidas por medianas agrupadas por UF ou por mediana global, conforme disponibilidade. Respostas de questionários são preenchidas por mediana ou moda de acordo com o tipo de variável.
 
-A maioria das features apresenta o formato de multipla escolha, apontando grau de concordância ou adequação. Dessa forma é possível inferir que esses dados possuem intenção de ordenamento. Por isso, podemos tratálos de forma numérica.
+## Alvos de classificação
 
-### Alvos de classificação
-
-Serão removidas as colunas numéricas de `PROFICIENCIA_LP_SAEB`, `PROFICIENCIA_MT_SAEB`, que darão lugar a criação das colunas `NIVEL_LP` e `NIVEL_MT` a partir dos Quadros 5 e 6 da publicação oficial *Escalas de proficiência do Saeb*, referentes à 3ª série do Ensino Médio [1]:
+As colunas `NIVEL_LP` e `NIVEL_MT` são derivadas das proficiências oficiais do Saeb, usando as faixas publicadas para a 3ª série do Ensino Médio:
 
 | Disciplina | Nível 0 | Níveis intermediários | Último nível |
 | --- | --- | --- | --- |
-| LP | pontuação `< 225` | níveis 1 a 7 em intervalos `[225, 250)`, ..., `[375, 400)` | nível 8 para `>= 400` |
-| MT | pontuação `< 225` | níveis 1 a 9 em intervalos `[225, 250)`, ..., `[425, 450)` | nível 10 para `>= 450` |
+| Língua Portuguesa | pontuação `< 225` | níveis 1 a 7 em intervalos `[225, 250)`, ..., `[375, 400)` | nível 8 para `>= 400` |
+| Matemática | pontuação `< 225` | níveis 1 a 9 em intervalos `[225, 250)`, ..., `[425, 450)` | nível 10 para `>= 450` |
 
-Os limites inferiores são inclusivos e os superiores, exclusivos. Ao treinar qualquer alvo, ambas as proficiências brutas, ambos os níveis derivados, identificadores de aluno e demais campos sem significado preditivo serão excluídos das entradas. Isso evita que o resultado da prova, ou uma transformação direta dele, revele a resposta ao modelo.
+Para a modelagem final, os registros com nível `0` em qualquer um dos dois alvos são removidos. Assim, os modelos ativos predizem níveis `1` a `8` para Língua Portuguesa e `1` a `10` para Matemática. Essa escolha evita que a classe de menor proficiência domine parte relevante da análise e mantém o foco nas faixas oficiais positivas de desempenho.
 
-Usar as faixas oficiais mantém o significado pedagógico das classes e permite relacionar os resultados à escala publicada pelo Inep. Faixas criadas por quantis produziriam classes mais equilibradas, mas seus limites mudariam com a amostra e perderiam essa interpretação. A remoção das notas de LP e MT é deliberadamente conservadora: embora a nota da outra disciplina possa elevar a precisão, ela funciona como uma medida paralela do mesmo desempenho escolar e desviaria o estudo para uma previsão baseada em outra prova.
+Os níveis possuem ordem natural, mas nesta versão são tratados como classes multiclasse nominais. Por isso, o F1-macro e as matrizes de confusão devem ser lidos com atenção: a métrica penaliza igualmente erros entre níveis vizinhos e erros entre níveis distantes.
 
-Os níveis possuem ordem natural, mas nesta primeira abordagem serão tratados como classes distintas pelos cinco algoritmos. Macro F1 não diferencia um erro entre níveis vizinhos de um erro entre níveis distantes; por isso, a matriz de confusão deve ser lida junto com a métrica.
+## Amostragem de modelagem
 
-## Contrato de treinamento
+Depois de remover os níveis `0`, o notebook usa uma amostra estratificada de 20% da base filtrada para treinar e avaliar os modelos. A estratificação é feita por `NIVEL_LP` com `random_state=42`.
 
-```python
-treinar_modelo(tabela, alvo, fabrica_modelo) -> ResultadoTreinamento
-```
+Essa redução foi adotada por limitação prática de tempo e memória. O conjunto original é grande, e o treinamento de cinco algoritmos para dois alvos, com validação cruzada e busca de hiperparâmetros, torna a execução completa custosa em máquinas comuns.
 
-`fabrica_modelo` é uma função sem argumentos que devolve um estimador novo e compatível com a API do scikit-learn (`fit` e `predict`). Esse formato evita reutilizar estado ajustado entre folds. O projeto comparará fábricas para:
+## Prevenção de vazamento
 
-- `LogisticRegression`;
-- `KNeighborsClassifier`;
-- `DecisionTreeClassifier`;
-- `RandomForestClassifier`;
-- `XGBClassifier`.
+Durante o treinamento, `src/modelagem.py` remove automaticamente colunas que não devem entrar como preditores:
 
-Exemplos de fábricas válidas são `lambda: LogisticRegression(max_iter=1000, random_state=42)`, `lambda: KNeighborsClassifier()`, `lambda: DecisionTreeClassifier(random_state=42)`, `lambda: RandomForestClassifier(random_state=42)` e `lambda: XGBClassifier(random_state=42, eval_metric="mlogloss")`.
+- Alvos: `NIVEL_LP`, `NIVEL_MT`.
+- Identificadores: `ID_ALUNO`, `ID_ESCOLA`, `ID_MUNICIPIO`.
+- Proficiências e agregados diretamente ligados ao alvo: `PROFICIENCIA_LP_SAEB`, `PROFICIENCIA_MT_SAEB`, `MEDIA_EM_LP`, `MEDIA_EM_MT`, `MEDIA_EM_NIVEL_LP`, `MEDIA_EM_NIVEL_MT`.
 
-Embora os exemplos acima apresentem apenas algumas configurações possíveis, os hiperparâmetros utilizados foram definidos manualmente com o objetivo de manter o custo computacional dos experimentos em níveis compatíveis com máquinas de uso comum, sem a necessidade de hardware especializado. Dessa forma, buscamos um equilíbrio entre tempo de execução e capacidade de modelagem, priorizando configurações que permitissem a execução dos testes de forma estável e acessível. 
+`ID_ESCOLA` não entra como feature, mas é preservado temporariamente para formar os grupos da validação cruzada. Essa decisão evita que o modelo memorize escolas específicas e reduz vazamento entre treino e teste.
 
-Para o `KNeighborsClassifier` foi utilizado `n_neighbors=5`, mantendo uma configuração simples e amplamente utilizada como referência. 
+## Pipeline de pré-processamento
 
-O `LogisticRegression` utilizou `max_iter=1000` para garantir a convergência do treinamento. 
+Cada modelo é treinado dentro de um pipeline único do scikit-learn. O pipeline separa variáveis numéricas e categóricas, aplicando:
 
-O `DecisionTreeClassifier` teve sua profundidade limitada por `max_depth=20`, para que o crescimento da estrutura e o consumo de recursos computacionais não se tornasse excessivo. 
+- Imputação pela mediana e padronização (`StandardScaler`) para variáveis numéricas.
+- Imputação pelo valor mais frequente e `OneHotEncoder(handle_unknown="ignore")` para variáveis categóricas.
 
-O `RandomForestClassifier` foi configurado com 300 árvores (`n_estimators=300`), buscando limitar o tempo de treinamento sem comprometer significativamente a estabilidade das previsões. 
+Algumas colunas numéricas de identificação/categoria, como `ID_UF`, `ID_AREA`, `ID_SERIE` e `IN_PUBLICA`, são tratadas como categóricas para evitar impor uma relação ordinal artificial.
 
-Já o `XGBClassifier` utilizou 500 estimadores (`n_estimators=500`), profundidade máxima de 8 níveis (`max_depth=8`) e taxa de aprendizado de 0,05 (`learning_rate=0.05`), adotando valores intermediários que permitissem a execução dos experimentos em tempo viável. 
+O pipeline também codifica internamente os rótulos do alvo com `LabelEncoder`, preservando os rótulos originais nas predições e em `classes_`.
 
-Os hiperparâmetros iniciais foram definidos nas fábricas, onde servem como ponto de partida para cada modelo. Durante o treinamento, é aplicada uma busca em grade (Grid Search) sobre um conjunto reduzido de combinações predefinidas para cada abordagem. Desta forma, podemos ajustar os principais hiperparâmetros paranão ultrapassar o custo computacional dos experimentos. 
+## Modelos avaliados
 
-O retorno `ResultadoTreinamento` conterá o pipeline final, nome do modelo, alvo, métricas de cada fold e média e desvio-padrão das métricas.
+Os cinco algoritmos avaliados são:
 
-Uma fábrica, em vez de um estimador já criado, garante uma instância sem estado para cada fold e para o ajuste final. Isso impede que parâmetros aprendidos em uma rodada sejam reutilizados na seguinte. O contrato previsto para o resultado é:
+- Regressão Logística.
+- KNN.
+- Árvore de Decisão.
+- Random Forest.
+- XGBoost.
 
-| Campo | Conteúdo |
+As fábricas de modelo estão em `src/modelos.py`. As configurações-base atuais são:
+
+| Modelo | Configuração-base |
 | --- | --- |
-| `pipeline` | pipeline treinado com o melhor conjunto de hiperparâmetros |
-| `modelo` | nome do algoritmo avaliado |
-| `alvo` | coluna de proficiência prevista |
-| `metricas_avaliacao` | métricas registradas durante as etapas de validação e teste |
-| `metricas_resumo` | resumo das métricas utilizadas na comparação dos modelos |
-| `matriz_confusao` | matriz de confusão produzida sobre o conjunto de teste |
+| KNN | `n_neighbors=5`, `weights="distance"` |
+| Regressão Logística | `max_iter=1000`, `class_weight="balanced"` |
+| Árvore de Decisão | `max_depth=20`, `random_state=42`, `class_weight="balanced"` |
+| Random Forest | `n_estimators=300`, `random_state=42`, `n_jobs=1`, `class_weight="balanced_subsample"` |
+| XGBoost | `n_estimators=200`, `max_depth=8`, `learning_rate=0.05`, `subsample=0.8`, `colsample_bytree=0.8`, `objective="multi:softprob"`, `tree_method="hist"`, `random_state=42`, `n_jobs=1` |
 
-O pipeline fará todo o pré-processamento necessário. Variáveis numéricas terão imputação pela mediana e padronização; variáveis categóricas terão imputação pelo valor mais frequente e codificação one-hot. Como essas etapas ficam no mesmo objeto que o estimador, o pipeline treinado poderá receber novas linhas no mesmo formato da tabela processada e executar `predict` sem preparação manual paralela.
+O wrapper de classificação também aplica `sample_weight` balanceado quando o estimador aceita pesos e não possui `class_weight` configurado, o que beneficia modelos como KNN/XGBoost no cenário de classes desbalanceadas.
 
-### Escolha dos modelos
+## Validação e seleção de hiperparâmetros
 
-Esses modelos supervisionados foram escolhidos para capturar diferentes formas de relação entre variáveis tabulares estruturadas do Saeb, explorando tanto as relações lineares quanto os padrões não lineares, além de permitir compreender as interações entre atributos.
+A validação final usa `StratifiedGroupKFold`, com estratificação por classe e agrupamento por `ID_ESCOLA`.
 
-A regressão logística foi utilizada como base por possuir uma relação aproximadamente linear entre as features e as classes de proficiência, servindo como referência interpretável para comparação com os modelos mais complexos.
+O procedimento é:
 
-O K-Nearest Neighbors foi incluído pois depende diretamente de medidas de distância no espaço de atributos, o que permite avaliar se estudantes com características semelhantes tendem a compartilhar níveis de desempenho próximos dentro do conjunto de dados.
+1. Separar um fold externo para teste usando até `MAX_SPLITS_TESTE=7`.
+2. Usar os folds restantes como treino/validação.
+3. Rodar `GridSearchCV` com até `MAX_SPLITS_VALIDACAO=3` folds internos.
+4. Selecionar hiperparâmetros por `f1_macro`.
+5. Avaliar o melhor pipeline no fold externo de teste.
+6. Ajustar um pipeline final com os melhores hiperparâmetros sobre toda a base de modelagem.
 
-A árvore de decisão foi escolhida por particionar as features em regras hierárquicas, construindo condições específicas a partir das combinações de resultados dos questionários e variáveis escolares.
+Os grids atuais são:
 
-O Random Forest é utilizado por ser uma extensão baseada em ensembles de árvores independentes, reduzindo a variância e melhorando a estabilidade das previsões de diversos subconjuntos de dados. 
+| Modelo | Hiperparâmetros avaliados |
+| --- | --- |
+| KNN | `modelo__n_neighbors`: 3, 5, 7 |
+| Regressão Logística | `modelo__C`: 0.1, 1.0, 10.0 |
+| Árvore de Decisão | `modelo__max_depth`: 5, 10, 20 |
+| Random Forest | `modelo__n_estimators`: 100, 300 |
+| XGBoost | `modelo__max_depth`: 4, 8; `modelo__learning_rate`: 0.05, 0.1 |
 
-O XGBoost foi incluído por ser um método amplamente utilizado em artigos científicos cujo objetivo é resolver problemas de dados tabulares estruturados, principalmente em contextos educacionais e de classificação multiclasse, pois ele é capaz de construir modelos sequenciais que corrigem erros das iterações anteriores.
+A execução é sequencial (`GRID_N_JOBS=1`) para reduzir consumo de memória.
 
+## Checkpoint e artefatos
 
-Todos os modelos seguem o mesmo pipeline de pré-processamento e exatamente as mesmas divisões de validação, o que possibilita e facilita a comparação entre as abordagens selecionadas. A diferença de desempenho observada entre eles é definida exclusivamente pela capacidade de modelagem de cada algoritmo.
+O notebook salva os resultados em `artefatos/resultados_modelagem.pkl` e o resumo tabular em `artefatos/resumo_modelos.csv`. Esses arquivos são locais e não devem ser versionados, pois podem ser grandes e dependem da execução local.
 
+Se a execução for interrompida, `RESUMIR_EXECUCAO=True` permite retomar apenas combinações pendentes de alvo/modelo. Checkpoints corrompidos são movidos para um arquivo com sufixo `corrompido_<timestamp>`.
 
-É importante ressaltar que a escolha desses modelos tem como propósito comparar diferentes abordagens de aprendizado sob a mesma estrutura de dados e avaliação. Isso permite analisar até que ponto as relações mais simples são suficientes ou se ganhos significativos são obtidos ao introduzir não linearidade e métodos baseados em ensembles.
+## Métricas e interpretação
 
-### Justificativa do pré-processamento
+Para cada combinação de modelo e alvo, são registradas:
 
-A mediana é menos sensível a valores extremos que a média. A categoria mais frequente fornece um valor válido para respostas ausentes sem criar códigos numéricos artificiais. One-hot encoding evita impor uma ordem inexistente às alternativas dos questionários e deve ignorar categorias novas durante a predição, mantendo o esquema aprendido no treino.
+- Acurácia e F1-macro nos folds de validação.
+- Média e desvio-padrão das métricas de validação.
+- Acurácia e F1-macro no conjunto de teste.
+- Matriz de confusão no conjunto de teste.
+- Métricas derivadas da matriz de confusão: precision, recall e F1 por classe, além de versões macro e ponderadas.
 
-A padronização é essencial para KNN, que usa distâncias, e melhora a otimização da regressão logística quando as escalas numéricas diferem. Árvores e florestas não dependem da escala, mas podem compartilhar a mesma transformação sem mudar a ordem dos valores. Todo pré-processamento deve ser ajustado dentro de cada fold: calcular medianas, categorias ou escalas antes da divisão permitiria que a validação influenciasse o treino.
+As matrizes de confusão são exibidas em duas formas:
 
-## Validação e seleção de modelos
+- Contagens absolutas.
+- Percentuais normalizados por classe real, facilitando a leitura do recall por classe.
 
-Os dados foram divididos em três subconjuntos independentes:
+Como as classes são desbalanceadas, a acurácia isolada pode favorecer modelos que predizem classes frequentes. O F1-macro, o recall por classe e as matrizes de confusão são mais adequados para avaliar se o modelo reconhece também níveis raros.
 
-- Treinamento (~70%)
-- Validação (~15%)
-- Teste (~15%)
+## Limitações
 
-A divisão foi realizada de forma estratificada, buscando preservar a distribuição dos níveis de proficiência em cada subconjunto. Dessa forma, evitamos que uma classe fique super ou sub-representada em alguma etapa do processo de treinamento e avaliação.
+- As variáveis disponíveis descrevem contexto socioeconômico, familiar e escolar, mas não medem diretamente conhecimento do estudante.
+- Os níveis Saeb são faixas discretas de uma proficiência contínua; erros entre níveis vizinhos são penalizados como qualquer outro erro de classe.
+- O desbalanceamento é forte, especialmente em níveis altos de Matemática.
+- A amostragem de 20% reduz custo computacional, mas pode limitar estabilidade para classes raras.
+- A validação agrupada por escola é mais exigente e reduz a chance de superestimar desempenho por memorização de escolas.
+- O modelo deve ser interpretado como análise agregada de padrões, não como ferramenta individual de decisão de alto impacto.
 
-O conjunto de treinamento é utilizado para ajuste dos modelos e busca de hiperparâmetros. O conjunto de validação é utilizado para comparar diferentes configurações e selecionar aquelas que apresentam melhor capacidade de generalização. Já o conjunto de teste permanece isolado durante todo o processo e é utilizado apenas na avaliação final dos modelos.
+## Reprodutibilidade
 
-Essa separação é importante porque um modelo pode apresentar excelente desempenho nos dados utilizados durante o treinamento e ainda assim falhar ao analisar novos estudantes. A utilização de um conjunto de validação permite verificar se os padrões aprendidos são realmente generalizáveis e não apenas resultado de sobreajuste aos dados de treinamento.
+Para reproduzir o fluxo:
 
-Após a escolha da melhor configuração, o modelo é reajustado utilizando os dados de treinamento e validação. A avaliação final é então realizada sobre o conjunto de teste, fornecendo uma estimativa mais confiável do desempenho esperado em novos dados.
-
-### Busca de hiperparâmetros
-
-Embora cada algoritmo possua uma configuração inicial definida manualmente, o desempenho dos modelos pode variar significativamente de acordo com a escolha de seus hiperparâmetros. Por esse motivo, foi utilizada uma etapa de busca automática baseada em Grid Search (`GridSearchCV`).
-
-O Grid Search avalia diferentes combinações de hiperparâmetros previamente definidas para cada algoritmo e identifica aquela que produz o melhor resultado segundo uma métrica de desempenho escolhida. Neste trabalho, a métrica utilizada para seleção foi o F1-Score Macro.
-
-A escolha do F1-Score Macro ocorreu porque os níveis de proficiência não apresentam distribuição uniforme. Em cenários desbalanceados, a acurácia pode produzir interpretações excessivamente otimistas ao favorecer classes mais frequentes. O F1-Score Macro atribui o mesmo peso a todas as classes, permitindo uma avaliação mais equilibrada do desempenho dos modelos.
-
-A busca foi realizada utilizando validação cruzada interna com três partições (`cv=3`). Para cada combinação de hiperparâmetros, o conjunto de treinamento é dividido em três subconjuntos, permitindo avaliar a estabilidade da configuração antes de aplicá-la aos dados de validação.
-
-Os principais hiperparâmetros avaliados foram:
-
-- KNN: quantidade de vizinhos (`n_neighbors`);
-- Regressão Logística: fator de regularização (`C`);
-- Árvore de Decisão: profundidade máxima (`max_depth`);
-- Random Forest: número de árvores (`n_estimators`);
-- XGBoost: profundidade máxima (`max_depth`) e taxa de - aprendizado (`learning_rate`).
-
-Ao final desse processo, a configuração com melhor F1-Score Macro é selecionada e utilizada nas etapas posteriores de avaliação.
-
-## Interpretação e limitações
-
-- Desempenho preditivo não demonstra que uma variável causa maior ou menor proficiência.
-- Ausência de respostas pode carregar informação social; a imputação melhora a compatibilidade dos modelos, mas pode ocultar esse padrão e deve ser quantificada.
-- Níveis extremos podem ter poucos estudantes ou poucas escolas, elevando a incerteza do Macro F1. Média e desvio-padrão devem sempre ser apresentados juntos.
-- As respostas são autorrelatadas e estão sujeitas a erro de preenchimento.
-- O modelo é específico ao ano, etapa e população filtrada. Aplicação em outro Saeb exige verificar alterações no questionário, nas escalas e na distribuição dos dados.
-- Atributos sensíveis podem reproduzir desigualdades existentes. As análises devem ser agregadas e não usadas para decisões individuais de alto impacto.
-
-## Reprodutibilidade e verificações
-
-- Confirmar que a quantidade de estudantes não aumenta após a junção.
-- Registrar quantidade e proporção de linhas removidas em cada filtro.
-- Comparar a distribuição dos níveis antes e depois da junção com os dados de direção.
-- Verificar ausência de sobreposição de `ID_ESCOLA` entre treino e validação.
-- Confirmar que todas as classes esperadas estão representadas antes do treinamento; registrar quando um nível não existir nos dados filtrados.
-- Reutilizar exatamente os mesmos folds na comparação dos cinco algoritmos.
-- Testar a predição com categorias não observadas no treino e valores ausentes.
-- Executar o notebook do início ao fim após implementar o fluxo e registrar versões das dependências, inclusive `scikit-learn` e `xgboost`.
+1. Garantir que `dados/TS_ALUNO_34EM.csv`, `dados/TS_DIRETOR.csv` e `dados/TS_ESCOLA.csv` estejam disponíveis.
+2. Instalar as dependências listadas em `Requirements.txt`.
+3. Executar `NotebookFinal.ipynb` do início ao fim.
+4. Verificar se os artefatos foram gerados em `artefatos/`.
+5. Confirmar que nenhuma base bruta, checkpoint grande ou saída local foi adicionada ao Git.
 
 ## Referências
 
-1. BRASIL. Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep). [*Escalas de proficiência do Saeb*](http://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_basica/escalas_de_proficiencia_do_saeb.pdf). Brasília, DF: Inep/MEC, 2020. Quadros 5 e 6, p. 29–38. Escalas específicas publicadas pelo Inep: [Língua Portuguesa — 3ª série do Ensino Médio](http://download.inep.gov.br/educacao_basica/prova_brasil_saeb/escala/escala_proficiencia/2018/LP_3EM.pdf) e [Matemática — 3ª série do Ensino Médio](http://download.inep.gov.br/educacao_basica/prova_brasil_saeb/escala/escala_proficiencia/2018/MT_3EM.pdf). Acesso em: 20 jun. 2026.
+1. BRASIL. Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep). [*Escalas de proficiência do Saeb*](http://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_basica/escalas_de_proficiencia_do_saeb.pdf). Brasília, DF: Inep/MEC, 2020. Quadros 5 e 6, p. 29-38. Escalas específicas publicadas pelo Inep: [Língua Portuguesa - 3ª série do Ensino Médio](http://download.inep.gov.br/educacao_basica/prova_brasil_saeb/escala/escala_proficiencia/2018/LP_3EM.pdf) e [Matemática - 3ª série do Ensino Médio](http://download.inep.gov.br/educacao_basica/prova_brasil_saeb/escala/escala_proficiencia/2018/MT_3EM.pdf). Acesso em: 20 jun. 2026.
