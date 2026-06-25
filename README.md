@@ -1,4 +1,5 @@
-# Projeto Final de Introdução a Machine Learning
+# SAEB 2023: análise socioeconômica e de infraestrutura escolar para previsão de desempenho acadêmico
+
 ## Integrantes
 - Ana Caroline Souza Lira
 - Daniel Goulart Camacho Gonçalves
