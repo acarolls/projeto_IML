@@ -37,11 +37,21 @@ Serão removidas as colunas numéricas de `PROFICIENCIA_LP_SAEB`, `PROFICIENCIA_
 | LP | pontuação `< 225` | níveis 1 a 7 em intervalos `[225, 250)`, ..., `[375, 400)` | nível 8 para `>= 400` |
 | MT | pontuação `< 225` | níveis 1 a 9 em intervalos `[225, 250)`, ..., `[425, 450)` | nível 10 para `>= 450` |
 
-Os limites inferiores são inclusivos e os superiores, exclusivos. Ao treinar qualquer alvo, ambas as proficiências brutas, ambos os níveis derivados, identificadores de aluno e demais campos sem significado preditivo serão excluídos das entradas. Isso evita que o resultado da prova, ou uma transformação direta dele, revele a resposta ao modelo.
+Após obtenção de desempenho não satisfatório para a alta quantidade de níveis presente na escala de proficiência oficial, resolvemos agrupar certos níveis, indicando desempenho baixo, médio e alto. Seguindo as orientações abaixo: 
 
-Usar as faixas oficiais mantém o significado pedagógico das classes e permite relacionar os resultados à escala publicada pelo Inep. Faixas criadas por quantis produziriam classes mais equilibradas, mas seus limites mudariam com a amostra e perderiam essa interpretação. A remoção das notas de LP e MT é deliberadamente conservadora: embora a nota da outra disciplina possa elevar a precisão, ela funciona como uma medida paralela do mesmo desempenho escolar e desviaria o estudo para uma previsão baseada em outra prova.
+-- Língua Portuguesa (1 a 8) --
 
-Os níveis possuem ordem natural, mas nesta primeira abordagem serão tratados como classes distintas pelos cinco algoritmos. Macro F1 não diferencia um erro entre níveis vizinhos de um erro entre níveis distantes; por isso, a matriz de confusão deve ser lida junto com a métrica.
+Níveis 1,2,3 da Escala de Proeficiência SAEB - Desempenho baixo
+Níveis 4,5 da Escala de Proeficiência SAEB - Desempenho médio
+Níveis 6,7,8 da Escala de Proeficiência SAEB - Desempenho alto
+
+-- Matemática (1 a 10) -- 
+
+Níveis 1,2,3 da Escala de Proeficiência SAEB - Desempenho baixo
+Níveis 4,5,6 da Escala de Proeficiência SAEB - Desempenho médio
+Níveis 7,8,9,10 da Escala de Proeficiência SAEB - Desempenho alto
+
+Os níveis possuem ordem natural, mas nesta primeira abordagem serão tratados como classes distintas pelos algoritmos. 
 
 ## Contrato de treinamento
 
@@ -132,11 +142,8 @@ Após a escolha da melhor configuração, o modelo é reajustado utilizando os d
 
 ### Busca de hiperparâmetros
 
-Embora cada algoritmo possua uma configuração inicial definida manualmente, o desempenho dos modelos pode variar significativamente de acordo com a escolha de seus hiperparâmetros. Por esse motivo, foi utilizada uma etapa de busca automática baseada em Grid Search (`GridSearchCV`).
+Embora cada algoritmo possua uma configuração inicial definida manualmente, o desempenho dos modelos pode variar significativamente de acordo com a escolha de seus hiperparâmetros. Por esse motivo, foi utilizada uma etapa e busca manual utilizando hiperparâmetros comummente utilizados para selecionar maior desempenho. O F1-Weighted é utilizado como critério desempate de desempenho no conjunto de validação visto o desbalanceamento das classes no dataset.
 
-O Grid Search avalia diferentes combinações de hiperparâmetros previamente definidas para cada algoritmo e identifica aquela que produz o melhor resultado segundo uma métrica de desempenho escolhida. Neste trabalho, a métrica utilizada para seleção foi o F1-Score Macro.
-
-A escolha do F1-Score Macro ocorreu porque os níveis de proficiência não apresentam distribuição uniforme. Em cenários desbalanceados, a acurácia pode produzir interpretações excessivamente otimistas ao favorecer classes mais frequentes. O F1-Score Macro atribui o mesmo peso a todas as classes, permitindo uma avaliação mais equilibrada do desempenho dos modelos.
 
 A busca foi realizada utilizando validação cruzada interna com três partições (`cv=3`). Para cada combinação de hiperparâmetros, o conjunto de treinamento é dividido em três subconjuntos, permitindo avaliar a estabilidade da configuração antes de aplicá-la aos dados de validação.
 
@@ -148,7 +155,7 @@ Os principais hiperparâmetros avaliados foram:
 - Random Forest: número de árvores (`n_estimators`);
 - XGBoost: profundidade máxima (`max_depth`) e taxa de - aprendizado (`learning_rate`).
 
-Ao final desse processo, a configuração com melhor F1-Score Macro é selecionada e utilizada nas etapas posteriores de avaliação.
+Ao final desse processo, a configuração com melhor F1-Score Weighted é selecionada e utilizada nas etapas posteriores de avaliação.
 
 ### Experimentos exploratórios
 
@@ -170,17 +177,6 @@ Vale ressaltar que o propósito desta avaliação não é medir o desempenho rea
 - As respostas são autorrelatadas e estão sujeitas a erro de preenchimento.
 - O modelo é específico ao ano, etapa e população filtrada. Aplicação em outro Saeb exige verificar alterações no questionário, nas escalas e na distribuição dos dados.
 - Atributos sensíveis podem reproduzir desigualdades existentes. As análises devem ser agregadas e não usadas para decisões individuais de alto impacto.
-
-## Reprodutibilidade e verificações
-
-- Confirmar que a quantidade de estudantes não aumenta após a junção.
-- Registrar quantidade e proporção de linhas removidas em cada filtro.
-- Comparar a distribuição dos níveis antes e depois da junção com os dados de direção.
-- Verificar ausência de sobreposição de `ID_ESCOLA` entre treino e validação.
-- Confirmar que todas as classes esperadas estão representadas antes do treinamento; registrar quando um nível não existir nos dados filtrados.
-- Reutilizar exatamente os mesmos folds na comparação dos cinco algoritmos.
-- Testar a predição com categorias não observadas no treino e valores ausentes.
-- Executar o notebook do início ao fim após implementar o fluxo e registrar versões das dependências, inclusive `scikit-learn` e `xgboost`.
 
 ## Referências
 
