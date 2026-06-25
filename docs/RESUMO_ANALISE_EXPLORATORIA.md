@@ -113,7 +113,7 @@ Nível 10:     79 alunos ( 0,01%) - Menor classe
 
 ## Próximas Etapas
 
-1. **Pré-processamento** (`03-Modelagem.py`)
+1. **Pré-processamento** (`src/modelagem.py`)
    - Implementar `separar_dados()` - remover variáveis inadequadas
    - Implementar `criar_pipeline()` - encadear transformações
    

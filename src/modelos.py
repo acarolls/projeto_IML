@@ -13,19 +13,22 @@ def criar_knn():
 def criar_regressao_logistica():
     return LogisticRegression(
         max_iter=1000,
+        class_weight="balanced",
     )
 
 def criar_arvore_decisao():
     return DecisionTreeClassifier(
         max_depth=20,
-        random_state=42
+        random_state=42,
+        class_weight="balanced",
     )
 
 def criar_random_forest():
     return RandomForestClassifier(
         n_estimators=300,
         random_state=42,
-        n_jobs=4
+        n_jobs=4,
+        class_weight="balanced_subsample",
     )
 
 

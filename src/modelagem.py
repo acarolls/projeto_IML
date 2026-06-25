@@ -16,7 +16,9 @@ from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.utils.class_weight import compute_sample_weight
+from sklearn.utils.validation import has_fit_parameter
 from sklearn.model_selection import (
     StratifiedGroupKFold,
     GridSearchCV,
@@ -30,6 +32,54 @@ from sklearn.metrics import (
 
 # Alias de tipo para uma função sem argumentos que cria um estimador novo.
 FabricaModelo = Callable[[], BaseEstimator]
+
+
+class PipelineClassificacao(Pipeline):
+    """Pipeline que codifica classes internamente e prediz rótulos originais."""
+
+    @property
+    def classes_(self):
+        return self.classes_originais_
+
+    def fit(self, X, y=None, **params):
+        if y is None:
+            return super().fit(X, y, **params)
+
+        self.codificador_alvo_ = LabelEncoder()
+        y_codificado = self.codificador_alvo_.fit_transform(y)
+        self.classes_originais_ = self.codificador_alvo_.classes_
+
+        modelo = self.steps[-1][1]
+        parametros_modelo = (
+            modelo.get_params()
+            if hasattr(modelo, "get_params")
+            else {}
+        )
+        usa_class_weight = parametros_modelo.get("class_weight") is not None
+
+        if (
+            has_fit_parameter(modelo, "sample_weight")
+            and not usa_class_weight
+            and "modelo__sample_weight" not in params
+        ):
+            params = {
+                **params,
+                "modelo__sample_weight": compute_sample_weight(
+                    class_weight="balanced",
+                    y=y_codificado,
+                ),
+            }
+
+        return super().fit(X, y_codificado, **params)
+
+    def predict(self, X, **params):
+        predicoes = super().predict(X, **params)
+
+        if not hasattr(self, "codificador_alvo_"):
+            return predicoes
+
+        predicoes = np.asarray(predicoes, dtype=int)
+        return self.codificador_alvo_.inverse_transform(predicoes)
 
 COLUNAS_ALVO = {
     "NIVEL_LP",
@@ -91,9 +141,22 @@ def _quantidade_splits_possivel(
     max_splits: int,
 ) -> int:
     """Define quantidade segura de folds para classes e grupos disponíveis."""
+    grupos_por_classe = (
+        pd.DataFrame(
+            {
+                "classe": classes,
+                "grupo": grupos,
+            }
+        )
+        .drop_duplicates()
+        .groupby("classe")["grupo"]
+        .nunique()
+    )
+
     menor_classe = int(classes.value_counts().min())
+    menor_grupos_por_classe = int(grupos_por_classe.min())
     total_grupos = int(grupos.nunique())
-    return min(max_splits, menor_classe, total_grupos)
+    return min(max_splits, menor_classe, menor_grupos_por_classe, total_grupos)
 
 
 
@@ -290,7 +353,7 @@ def criar_pipeline(
         remainder="drop",
     )
 
-    return Pipeline(
+    return PipelineClassificacao(
         [
             ("preprocessamento", preprocessador),
             ("modelo", modelo),
@@ -337,7 +400,7 @@ def avaliar_modelo(
     n_splits_validacao = _quantidade_splits_possivel(
         y_train_val,
         grupos_train_val,
-        max_splits=6,
+        max_splits=3,
     )
     if n_splits_validacao < 2:
         raise ValueError("dados insuficientes para separar conjunto de validação.")
@@ -348,21 +411,6 @@ def avaliar_modelo(
         random_state=42,
     )
 
-    train_idx_rel, val_idx_rel = next(
-        split_validacao.split(
-            X_train_val,
-            y_train_val,
-            groups=grupos_train_val,
-        )
-    )
-
-    X_train = X_train_val.iloc[train_idx_rel]
-    y_train = y_train_val.iloc[train_idx_rel]
-    grupos_train = grupos_train_val.iloc[train_idx_rel]
-
-    X_val = X_train_val.iloc[val_idx_rel]
-    y_val = y_train_val.iloc[val_idx_rel]
-
     modelo = fabrica_modelo()
 
     pipeline = criar_pipeline(
@@ -370,62 +418,26 @@ def avaliar_modelo(
         modelo,
     )
 
-    n_splits_grid = _quantidade_splits_possivel(
-        y_train,
-        grupos_train,
-        max_splits=3,
-    )
-    if n_splits_grid < 2:
-        raise ValueError("dados insuficientes para busca de hiperparâmetros.")
-
-    split_grid = StratifiedGroupKFold(
-        n_splits=n_splits_grid,
-        shuffle=True,
-        random_state=42,
-    )
-
     grid = GridSearchCV(
         estimator=pipeline,
         param_grid=obter_parametros(modelo),
-        scoring="f1_macro",
-        cv=split_grid,
+        scoring={
+            "accuracy": "accuracy",
+            "f1_macro": "f1_macro",
+        },
+        refit="f1_macro",
+        cv=split_validacao,
         n_jobs=4,
+        return_train_score=False,
     )
 
     grid.fit(
-        X_train,
-        y_train,
-        groups=grupos_train,
+        X_train_val,
+        y_train_val,
+        groups=grupos_train_val,
     )
 
     pipeline = grid.best_estimator_
-
-    y_pred_val = pipeline.predict(X_val)
-
-    accuracy_val = accuracy_score(
-        y_val,
-        y_pred_val,
-    )
-
-    f1_val = f1_score(
-        y_val,
-        y_pred_val,
-        average="macro",
-        zero_division=0,
-    )
-
-    X_train_final = pd.concat(
-        [X_train, X_val]
-    )
-
-    y_train_final = pd.concat(
-        [y_train, y_val]
-    )
-
-    pipeline.fit(
-        X_train_final,
-        y_train_final,
-    )
 
     y_pred_test = pipeline.predict(X_test)
 
@@ -447,22 +459,38 @@ def avaliar_modelo(
         labels=np.sort(classes.unique()),
     )
 
+    melhor_indice = grid.best_index_
     metricas_avaliacao = pd.DataFrame(
         [
             {
-                "accuracy_validacao": accuracy_val,
-                "f1_macro_validacao": f1_val,
-                "accuracy_teste": accuracy_test,
-                "f1_macro_teste": f1_test,
+                "fold": fold + 1,
+                "accuracy_validacao": grid.cv_results_[
+                    f"split{fold}_test_accuracy"
+                ][melhor_indice],
+                "f1_macro_validacao": grid.cv_results_[
+                    f"split{fold}_test_f1_macro"
+                ][melhor_indice],
             }
+            for fold in range(n_splits_validacao)
         ]
     )
 
     metricas_resumo = {
-        "accuracy_validacao": accuracy_val,
-        "f1_macro_validacao": f1_val,
+        "accuracy_validacao_media": float(
+            grid.cv_results_["mean_test_accuracy"][melhor_indice]
+        ),
+        "accuracy_validacao_desvio": float(
+            grid.cv_results_["std_test_accuracy"][melhor_indice]
+        ),
+        "f1_macro_validacao_media": float(
+            grid.cv_results_["mean_test_f1_macro"][melhor_indice]
+        ),
+        "f1_macro_validacao_desvio": float(
+            grid.cv_results_["std_test_f1_macro"][melhor_indice]
+        ),
         "accuracy_teste": accuracy_test,
         "f1_macro_teste": f1_test,
+        "n_splits_validacao": float(n_splits_validacao),
     }
 
     return MetricasValidacao(
