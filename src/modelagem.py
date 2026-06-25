@@ -190,11 +190,23 @@ def treinar_modelo(
     tabela: pd.DataFrame,
     alvo: str,
     fabrica_modelo: FabricaModelo,
+    *,
+    grid_n_jobs: int = 1,
+    max_splits_teste: int = 7,
+    max_splits_validacao: int = 3,
 ) -> ResultadoTreinamento:
     """Valida, avalia e ajusta um classificador sobre toda a tabela."""
     validar_entradas(tabela, alvo, fabrica_modelo)
     features, classes, escolas = separar_dados(tabela, alvo)
-    metricas = avaliar_modelo(features, classes, escolas, fabrica_modelo)
+    metricas = avaliar_modelo(
+        features,
+        classes,
+        escolas,
+        fabrica_modelo,
+        grid_n_jobs=grid_n_jobs,
+        max_splits_teste=max_splits_teste,
+        max_splits_validacao=max_splits_validacao,
+    )
 
     modelo = fabrica_modelo()
     pipeline = criar_pipeline(features, modelo)
@@ -369,12 +381,22 @@ def avaliar_modelo(
     classes: pd.Series,
     escolas: pd.Series,
     fabrica_modelo: FabricaModelo,
+    *,
+    grid_n_jobs: int = 1,
+    max_splits_teste: int = 7,
+    max_splits_validacao: int = 3,
 ) -> MetricasValidacao:
+    if grid_n_jobs < 1:
+        raise ValueError("grid_n_jobs deve ser maior ou igual a 1.")
+    if max_splits_teste < 2:
+        raise ValueError("max_splits_teste deve ser maior ou igual a 2.")
+    if max_splits_validacao < 2:
+        raise ValueError("max_splits_validacao deve ser maior ou igual a 2.")
 
     n_splits_teste = _quantidade_splits_possivel(
         classes,
         escolas,
-        max_splits=7,
+        max_splits=max_splits_teste,
     )
     if n_splits_teste < 2:
         raise ValueError("dados insuficientes para separar conjunto de teste.")
@@ -403,7 +425,7 @@ def avaliar_modelo(
     n_splits_validacao = _quantidade_splits_possivel(
         y_train_val,
         grupos_train_val,
-        max_splits=3,
+        max_splits=max_splits_validacao,
     )
     if n_splits_validacao < 2:
         raise ValueError("dados insuficientes para separar conjunto de validação.")
@@ -430,7 +452,7 @@ def avaliar_modelo(
         },
         refit="f1_macro",
         cv=split_validacao,
-        n_jobs=4,
+        n_jobs=grid_n_jobs,
         return_train_score=False,
     )
 

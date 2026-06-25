@@ -19,6 +19,12 @@ __pycache__/
 # Contributor instructions (local only)
 AGENTS.md
 
+# Local notebook/runtime state
+.cache/
+.ipynb_checkpoints/
+.ipython/
+.jupyter/
+
 # Local datasets and downloaded source material
 microdados_saeb_2023/
 TS_ALUNO_34EM.csv
@@ -27,3 +33,7 @@ TS_DIRETOR.csv
 TS_FINAL.csv
 dados/
 ~$Dicionario_Saeb_2023.xlsx
+
+# Local training artifacts
+artefatos/*
+!artefatos/.gitignore
