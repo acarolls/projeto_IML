@@ -37,7 +37,8 @@ def criar_xgboost():
         subsample=0.8,
         colsample_bytree=0.8,
         objective="multi:softprob",
-        num_class=3,
         eval_metric="mlogloss",
-        random_state=42
+        tree_method="hist",
+        random_state=42,
+        n_jobs=4
     )
