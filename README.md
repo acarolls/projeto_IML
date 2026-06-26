@@ -23,3 +23,9 @@ MARTINS, José Claion; VALIANTE, Leandro Ferrarezi. MINERAÇÃO DE DADOS EDUCACI
 
 https://sol.sbc.org.br/index.php/ctrle/article/view/40464
 LIRA, Rodrigo Antonio da S.; ALENCAR, Fernanda Maria Ribeiro. Análise de Fatores de Risco para a Evasão Escolar na Educação Básica usando Modelos Preditivos de Machine Learning. In: Congresso sobre Tecnologias na Educação (Ctrl+ e). SBC, 2025. p. 22-31.
+
+https://ieeexplore.ieee.org/abstract/document/5524021/?casa_token=x2zNi8Fa6zYAAAAA:XPIzWvqGixnW6y76Gd0888b1xJX5OJzDU_FQPaHTgjBJpTXqILT64Xre2GRAyI6rguN5uV5gubM3
+ROMERO, Cristóbal; VENTURA, Sebastián. Educational data mining: a review of the state of the art. IEEE Transactions on Systems, Man, and Cybernetics, Part C (applications and reviews), v. 40, n. 6, p. 601-618, 2010.
+
+https://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_basica/escalas_de_proficiencia_do_saeb.pdf
+BRASIL. Instituto de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep). Escala de proficiência de língua portuguesa 3ª série do ensino médio. Brasília, DF: Inep, 2020.
